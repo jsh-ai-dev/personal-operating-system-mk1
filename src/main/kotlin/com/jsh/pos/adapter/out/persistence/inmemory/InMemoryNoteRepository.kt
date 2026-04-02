@@ -53,7 +53,27 @@ class InMemoryNoteRepository : NoteCommandPort, NoteQueryPort {
      * remove의 반환값이 null이 아니면 실제 삭제가 일어난 것입니다.
      */
     override fun deleteById(id: String): Boolean = notes.remove(id) != null
+
+    /**
+     * 키워드로 노트를 검색합니다.
+     *
+     * 검색 대상: 제목(title), 본문(content), 태그(tags)
+     * 대소문자 구분 없음, 부분 일치 허용
+     *
+     * @param keyword 검색어 (이미 trim된 상태)
+     * @return 매칭된 노트 목록
+     */
+    override fun searchByKeyword(keyword: String): List<Note> {
+        val normalized = keyword.lowercase()
+
+        return notes.values.filter { note ->
+            note.title.lowercase().contains(normalized) ||
+                note.content.lowercase().contains(normalized) ||
+                note.tags.any { tag -> tag.lowercase().contains(normalized) }
+        }
+    }
 }
+
 
 
 
