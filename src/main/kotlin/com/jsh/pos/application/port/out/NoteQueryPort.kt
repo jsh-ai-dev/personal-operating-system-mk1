@@ -18,7 +18,19 @@ interface NoteQueryPort {
      * @return 노트 (없으면 null)
      */
     fun findById(id: String): Note?
+
+    /**
+     * 키워드로 노트를 검색합니다.
+     *
+     * 검색 대상은 저장소 구현에서 결정합니다(예: 제목/본문/태그).
+     *
+     * 기본 구현은 예외를 던집니다. (검색 어댑터 구현 전 안전장치)
+     */
+    fun searchByKeyword(keyword: String): List<Note> {
+        throw UnsupportedOperationException("searchByKeyword is not implemented")
+    }
 }
+
 
 
 
