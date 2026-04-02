@@ -268,7 +268,24 @@ class NoteControllerTest {
             .andExpect(jsonPath("$[0].id").value("note-1"))
             .andExpect(jsonPath("$[0].title").value("kotlin memo"))
     }
+
+    /**
+     * 테스트: 빈 검색어가 들어오면 500이 아니라 400 Bad Request로 응답하는가?
+     */
+    @Test
+    fun `GET search returns 400 when keyword is blank`() {
+        given(searchNotesUseCase.search(SearchNotesUseCase.Command(keyword = "   ")))
+            .willThrow(IllegalArgumentException("검색어는 비워둘 수 없습니다"))
+
+        mockMvc.perform(get("/api/v1/notes/search").param("keyword", "   "))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.error").value("Bad Request"))
+            .andExpect(jsonPath("$.message").value("검색어는 비워둘 수 없습니다"))
+            .andExpect(jsonPath("$.path").value("/api/v1/notes/search"))
+    }
 }
+
+
 
 
 

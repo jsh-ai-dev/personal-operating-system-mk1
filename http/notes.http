@@ -1,0 +1,38 @@
+### 기본 URL 설정
+@baseUrl = http://localhost:8080
+
+### ✅ 메모 생성
+POST {{baseUrl}}/api/v1/notes
+Content-Type: application/json
+
+{
+  "title": "첫 번째 PostgreSQL 메모",
+  "content": "Docker + Spring Boot 연동 성공! 한글도 잘 저장됩니다.",
+  "visibility": "PRIVATE",
+  "tags": ["docker", "postgresql", "kotlin"]
+}
+
+### ✅ 메모 검색 (검색어 필수, 빈 값이면 400)
+GET {{baseUrl}}/api/v1/notes/search?keyword=kotlin
+
+### ✅ 메모 검색
+GET {{baseUrl}}/api/v1/notes/search?keyword=PostgreSQL
+
+### ✅ 메모 단건 조회 (id를 실제 값으로 교체)
+GET {{baseUrl}}/api/v1/notes/f5af88de-a76d-4f90-a673-4d429ce20e06
+
+### ✅ 메모 수정 (id를 실제 값으로 교체)
+PUT {{baseUrl}}/api/v1/notes/f5af88de-a76d-4f90-a673-4d429ce20e06
+Content-Type: application/json
+
+{
+  "title": "수정된 메모 제목",
+  "content": "내용도 수정했습니다.",
+  "visibility": "PUBLIC",
+  "tags": ["수정", "테스트"]
+}
+
+### ✅ 메모 삭제 (id를 실제 값으로 교체)
+DELETE {{baseUrl}}/api/v1/notes/f5af88de-a76d-4f90-a673-4d429ce20e06
+
+

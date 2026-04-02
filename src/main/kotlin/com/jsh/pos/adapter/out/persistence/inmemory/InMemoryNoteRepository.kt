@@ -3,6 +3,7 @@ package com.jsh.pos.adapter.out.persistence.inmemory
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
+import org.springframework.context.annotation.Profile
 import org.springframework.stereotype.Repository
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,10 +20,12 @@ import java.util.concurrent.ConcurrentHashMap
  * - 두 포트(CommandPort, QueryPort) 동시 구현: 읽기/쓰기 분리 가능
  *
  * 주의사항:
- * - 프로덕션에서는 절대 사용하면 안 됨 (메모리 누수, 재시작하면 데이터 손실)
- * - 테스트나 개발 환경에서만 사용
+ * - 프로덕션에서는 절대 사용하면 안 됨 (재시작하면 데이터 손실)
+ * - 지금은 "inmemory" 프로필을 켠 경우에만 Spring Bean으로 등록됨
+ * - 즉, 평소 실행에서는 PostgreSQL(JPA) 구현이 기본 저장소 역할을 담당
  */
 @Repository
+@Profile("inmemory")
 class InMemoryNoteRepository : NoteCommandPort, NoteQueryPort {
     // ConcurrentHashMap: ID를 키로 Note를 저장
     // 멀티스레드 환경에서 동시성 문제 해결
@@ -77,6 +80,7 @@ class InMemoryNoteRepository : NoteCommandPort, NoteQueryPort {
         }
     }
 }
+
 
 
 

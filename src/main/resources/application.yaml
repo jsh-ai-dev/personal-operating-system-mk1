@@ -1,3 +1,24 @@
 spring:
   application:
     name: personal-operating-system
+  datasource:
+    # 환경변수가 없으면 로컬 PostgreSQL 기본값을 사용합니다.
+    # 사용자 입장에서는 Docker나 로컬 설치 DB를 바로 연결해볼 수 있습니다.
+    url: ${POS_DB_URL:jdbc:postgresql://localhost:5432/personal_operating_system}
+    username: ${POS_DB_USERNAME:pos}
+    password: ${POS_DB_PASSWORD:pos}
+  jpa:
+    hibernate:
+      # 개발 초기에는 update가 가장 편합니다.
+      # 나중에는 반드시 Flyway/Liquibase 같은 마이그레이션 도구로 전환하는 것을 추천합니다.
+      ddl-auto: update
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  sql:
+    init:
+      mode: never
