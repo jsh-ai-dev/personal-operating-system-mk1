@@ -25,9 +25,14 @@ AI 기반의 개인용 지식 관리 및 업무 자동화 시스템입니다.
 - `GET /api/v1/notes/search?keyword=...` - 노트 검색 API
 - `PUT /api/v1/notes/{id}` - 노트 수정 API
 - `DELETE /api/v1/notes/{id}` - 노트 삭제 API
+- `GET /` - 노트 화면(`/notes`)으로 리다이렉트
+- `GET /notes` - Thymeleaf 노트 목록 화면
+- `GET /notes/new` - Thymeleaf 노트 생성 화면
+- `GET /notes/{id}` - Thymeleaf 노트 상세 화면
 - 계층화된 패키지 구조 (`domain`, `application`, `adapter`, `infrastructure`)
 - `JpaNotePersistenceAdapter`를 통한 PostgreSQL 저장/조회
 - `note_tags` 분리 테이블 기반 태그 저장
+- 태그(`tags`)는 화면에서 사전순으로 정렬되어 표시됨
 - TDD 기반 단위 테스트 + 웹 통합 테스트
 
 ## 기획 문서
@@ -43,6 +48,14 @@ AI 기반의 개인용 지식 관리 및 업무 자동화 시스템입니다.
 ```powershell
 .\gradlew.bat test
 ```
+
+## 화면 확인 (Thymeleaf)
+
+```powershell
+.\gradlew.bat bootRun
+```
+
+브라우저에서 `http://localhost:8080/` 또는 `http://localhost:8080/notes`로 접속하면 화면을 확인할 수 있습니다.
 
 ## PostgreSQL로 실제 저장해보기
 

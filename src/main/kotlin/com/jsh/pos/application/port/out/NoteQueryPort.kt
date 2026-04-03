@@ -38,6 +38,15 @@ interface NoteQueryPort {
     fun findAllBookmarked(): List<Note> {
         throw UnsupportedOperationException("findAllBookmarked is not implemented")
     }
+
+    /**
+     * 전체 노트 목록을 최신 작성순으로 반환합니다.
+     *
+     * 기본 구현은 예외를 던집니다. (어댑터 구현 전 안전장치)
+     */
+    fun findAll(): List<Note> {
+        throw UnsupportedOperationException("findAll is not implemented")
+    }
 }
 
 

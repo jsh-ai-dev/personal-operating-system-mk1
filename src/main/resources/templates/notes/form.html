@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/common :: head(${mode == 'create'} ? '노트 생성' : '노트 수정')}"></head>
+<body>
+<div th:replace="~{layout/common :: header}"></div>
+<h1 th:text="${mode == 'create'} ? '새 노트 만들기' : '노트 수정'">노트 폼</h1>
+
+<form th:object="${form}"
+      class="form-wrap"
+      th:action="${mode == 'create'} ? @{/notes} : @{|/notes/${noteId}/edit|}"
+      method="post">
+    <div class="row">
+        <label for="title">제목</label>
+        <input id="title" type="text" th:field="*{title}">
+        <div class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+    </div>
+
+    <div class="row">
+        <label for="content">본문</label>
+        <textarea id="content" rows="10" th:field="*{content}"></textarea>
+        <div class="error" th:if="${#fields.hasErrors('content')}" th:errors="*{content}"></div>
+    </div>
+
+    <div class="row">
+        <label for="visibility">공개 범위</label>
+        <select id="visibility" th:field="*{visibility}">
+            <option value="PRIVATE">PRIVATE</option>
+            <option value="PUBLIC">PUBLIC</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <label for="tagsText">태그 (콤마로 구분)</label>
+        <input id="tagsText" type="text" th:field="*{tagsText}" placeholder="kotlin, spring">
+    </div>
+
+    <button type="submit" th:text="${mode == 'create'} ? '생성' : '수정 저장'">저장</button>
+    <a href="/notes">목록으로</a>
+</form>
+</body>
+</html>
+
+
+
+

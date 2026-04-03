@@ -1,0 +1,17 @@
+body { font-family: Arial, sans-serif; margin: 32px; }
+.top-nav { margin-bottom: 16px; }
+.top-nav a { margin-right: 8px; }
+.actions { margin-bottom: 16px; }
+.message { color: #0f5132; background: #d1e7dd; padding: 8px; margin-bottom: 12px; }
+.note-card { border: 1px solid #ddd; padding: 12px; margin-bottom: 12px; border-radius: 8px; }
+.meta { color: #666; }
+.meta-spaced { margin-bottom: 12px; }
+.empty { color: #777; }
+.error { color: #b02a37; font-size: 0.9rem; }
+.form-wrap { max-width: 700px; }
+.row { margin-bottom: 12px; }
+label { display: block; margin-bottom: 4px; }
+input[type='text'], textarea, select { width: 100%; padding: 8px; }
+.actions form { display: inline; margin-right: 8px; }
+
+

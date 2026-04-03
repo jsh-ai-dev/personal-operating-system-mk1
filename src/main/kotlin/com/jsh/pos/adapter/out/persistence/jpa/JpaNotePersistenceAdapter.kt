@@ -85,4 +85,12 @@ class JpaNotePersistenceAdapter(
     override fun findAllBookmarked(): List<Note> =
         noteJpaRepository.findAllByBookmarkedTrueOrderByCreatedAtDesc()
             .map { it.toDomain() }
+
+    /**
+     * 전체 노트 목록을 최신 작성순으로 반환합니다.
+     */
+    @Transactional(readOnly = true)
+    override fun findAll(): List<Note> =
+        noteJpaRepository.findAllByOrderByCreatedAtDesc()
+            .map { it.toDomain() }
 }

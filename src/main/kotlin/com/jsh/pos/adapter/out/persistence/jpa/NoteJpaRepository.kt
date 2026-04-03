@@ -48,4 +48,9 @@ interface NoteJpaRepository : JpaRepository<NoteJpaEntity, String> {
      * 별도 @Query 없이 메서드 이름만으로 쿼리를 자동 생성합니다.
      */
     fun findAllByBookmarkedTrueOrderByCreatedAtDesc(): List<NoteJpaEntity>
+
+    /**
+     * 전체 노트를 최신 작성순으로 조회합니다.
+     */
+    fun findAllByOrderByCreatedAtDesc(): List<NoteJpaEntity>
 }

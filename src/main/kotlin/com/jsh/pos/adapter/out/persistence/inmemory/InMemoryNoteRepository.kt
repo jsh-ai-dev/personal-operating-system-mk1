@@ -87,4 +87,11 @@ class InMemoryNoteRepository : NoteCommandPort, NoteQueryPort {
         notes.values
             .filter { it.bookmarked }
             .sortedByDescending { it.createdAt }
+
+    /**
+     * 전체 노트 목록을 최신 등록순으로 반환합니다.
+     */
+    override fun findAll(): List<Note> =
+        notes.values
+            .sortedByDescending { it.createdAt }
 }

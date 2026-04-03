@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <title th:text="${title}">POS Notes</title>
+    <link rel="stylesheet" th:href="@{/css/notes.css}">
+</head>
+<body>
+<div th:fragment="header">
+    <div class="top-nav">
+        <a href="/">홈</a>
+        <a href="/notes">노트 목록</a>
+        <a href="/notes/new">새 노트</a>
+    </div>
+</div>
+</body>
+</html>
+
+
+

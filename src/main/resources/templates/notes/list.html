@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout/common :: head('노트 목록')}"></head>
+<body>
+<div th:replace="~{layout/common :: header}"></div>
+<h1>노트 목록</h1>
+
+<div th:if="${message}" class="message" th:text="${message}"></div>
+
+<div class="actions">
+    <a href="/notes/new">새 노트 만들기</a>
+</div>
+
+<form method="get" action="/notes" class="actions">
+    <input type="text" name="keyword" placeholder="검색어" th:value="${keyword}">
+    <label>
+        <input type="checkbox" name="bookmarkedOnly" value="true" th:checked="${bookmarkedOnly}">
+        북마크만 보기
+    </label>
+    <button type="submit">검색</button>
+    <a href="/notes">초기화</a>
+</form>
+
+<div th:if="${#lists.isEmpty(notes)}" class="empty">아직 노트가 없습니다.</div>
+
+<div th:each="note : ${notes}" class="note-card">
+    <h3>
+        <a th:href="@{|/notes/${note.id}|}" th:text="${note.title}">제목</a>
+        <span th:if="${note.bookmarked}">★</span>
+    </h3>
+    <p th:text="${note.content}">본문</p>
+    <div class="meta">
+        <span th:text="${note.visibility}">PRIVATE</span>
+        <span> | 태그: </span>
+        <span th:text="${tagsDisplayById[note.id]}">-</span>
+    </div>
+</div>
+</body>
+</html>
+
+
+
+
+
+
+
