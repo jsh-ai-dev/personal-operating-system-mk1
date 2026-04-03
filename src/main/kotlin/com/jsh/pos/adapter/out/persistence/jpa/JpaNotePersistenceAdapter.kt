@@ -79,11 +79,10 @@ class JpaNotePersistenceAdapter(
      * 북마크된 노트 목록을 반환합니다.
      *
      * Spring Data JPA 메서드 이름 규칙으로 자동 생성된 쿼리를 사용합니다.
-     * 결과는 updatedAt 내림차순(최신 수정순)으로 정렬됩니다.
+     * 결과는 createdAt 내림차순(최신 등록순)으로 정렬됩니다.
      */
     @Transactional(readOnly = true)
     override fun findAllBookmarked(): List<Note> =
-        noteJpaRepository.findAllByBookmarkedTrueOrderByUpdatedAtDesc()
+        noteJpaRepository.findAllByBookmarkedTrueOrderByCreatedAtDesc()
             .map { it.toDomain() }
 }
-

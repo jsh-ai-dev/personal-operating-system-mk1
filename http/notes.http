@@ -44,5 +44,5 @@ POST {{baseUrl}}/api/v1/notes/f5af88de-a76d-4f90-a673-4d429ce20e06/bookmark
 DELETE {{baseUrl}}/api/v1/notes/f5af88de-a76d-4f90-a673-4d429ce20e06/bookmark
 
 ### ✅ 북마크된 메모 목록 조회
-### 응답: 200 OK + 북마크된 노트 배열 (최신 수정순)
+### 응답: 200 OK + 북마크된 노트 배열 (최신 등록순)
 GET {{baseUrl}}/api/v1/notes/bookmarks

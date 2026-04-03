@@ -81,18 +81,10 @@ class InMemoryNoteRepository : NoteCommandPort, NoteQueryPort {
     }
 
     /**
-     * 북마크된 노트를 최신 수정순으로 반환합니다.
+     * 북마크된 노트를 최신 등록순으로 반환합니다.
      */
     override fun findAllBookmarked(): List<Note> =
         notes.values
             .filter { it.bookmarked }
-            .sortedByDescending { it.updatedAt }
+            .sortedByDescending { it.createdAt }
 }
-
-
-
-
-
-
-
-

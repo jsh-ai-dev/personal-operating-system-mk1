@@ -38,15 +38,14 @@ interface NoteJpaRepository : JpaRepository<NoteJpaEntity, String> {
     fun searchByKeyword(@Param("keyword") keyword: String): List<NoteJpaEntity>
 
     /**
-     * 북마크된 노트를 최신 수정순으로 조회합니다.
+     * 북마크된 노트를 최신 등록순으로 조회합니다.
      *
      * Spring Data JPA의 메서드 이름 규칙:
      * - findAll: 전체 조회
      * - ByBookmarkedTrue: bookmarked = true 조건
-     * - OrderByUpdatedAtDesc: updatedAt 내림차순 정렬
+     * - OrderByCreatedAtDesc: createdAt 내림차순 정렬
      *
      * 별도 @Query 없이 메서드 이름만으로 쿼리를 자동 생성합니다.
      */
-    fun findAllByBookmarkedTrueOrderByUpdatedAtDesc(): List<NoteJpaEntity>
+    fun findAllByBookmarkedTrueOrderByCreatedAtDesc(): List<NoteJpaEntity>
 }
-

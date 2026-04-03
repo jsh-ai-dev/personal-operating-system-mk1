@@ -19,7 +19,6 @@ class GetBookmarkedNotesService(
 ) : GetBookmarkedNotesUseCase {
 
     override fun getBookmarked(): List<Note> =
-        // 저장소에서 북마크된 노트를 최신 수정순으로 가져옴
+        // 저장소에서 북마크된 노트를 최신 등록순으로 가져옴
         noteQueryPort.findAllBookmarked()
 }
-
