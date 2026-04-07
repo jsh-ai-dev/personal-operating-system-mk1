@@ -18,7 +18,7 @@ import java.time.Instant
  * 왜 이 테스트가 중요한가?
  * - 서비스 단위 테스트만으로는 "진짜 DB 매핑"이 맞는지 알 수 없습니다.
  * - tags가 별도 테이블에 잘 저장되는지
- * - search 쿼리가 title/content/tag를 모두 검색하는지
+ * - search 쿼리가 title/content/aiSummary/tag를 모두 검색하는지
  * - save/find/delete가 실제 JPA와 연결되어 동작하는지
  *   이런 부분은 영속성 테스트가 꼭 필요합니다.
  */
@@ -54,22 +54,23 @@ class JpaNotePersistenceAdapterTest {
     }
 
     @Test
-    fun `searchByKeyword finds note by title content and tag`() {
+    fun `searchByKeyword finds note by title content summary and tag`() {
         val now = Instant.parse("2026-04-03T01:00:00Z")
 
-        adapter.save(
-            Note.create(
-                id = "note-jpa-2",
-                title = "Kotlin 정리",
-                content = "Spring Boot와 함께 사용한 내용",
-                visibility = Visibility.PUBLIC,
-                tags = setOf("kotlin", "spring"),
-                now = now,
-            ),
-        )
+        val note = Note.create(
+            id = "note-jpa-2",
+            title = "Kotlin 정리",
+            content = "Spring Boot와 함께 사용한 내용",
+            visibility = Visibility.PUBLIC,
+            tags = setOf("kotlin", "spring"),
+            now = now,
+        ).updateSummary("코루틴 비동기 처리 핵심 정리", now.plusSeconds(1))
+
+        adapter.save(note)
 
         assertEquals(1, adapter.searchByKeyword("kotlin").size)
         assertEquals(1, adapter.searchByKeyword("spring boot").size)
+        assertEquals(1, adapter.searchByKeyword("비동기 처리").size)
         assertEquals(1, adapter.searchByKeyword("spring").size)
     }
 

@@ -69,6 +69,26 @@ class InMemoryNoteRepositoryTest {
     }
 
     @Test
+    fun `searchByKeyword finds notes by aiSummary`() {
+        val note = Note(
+            id = "note-3-summary",
+            title = "Async note",
+            content = "original english content",
+            visibility = Visibility.PUBLIC,
+            tags = emptySet(),
+            aiSummary = "비동기 처리 핵심만 한국어로 정리",
+            createdAt = Instant.now(),
+            updatedAt = Instant.now(),
+        )
+        repository.save(note)
+
+        val result = repository.searchByKeyword("비동기 처리")
+
+        assertEquals(1, result.size)
+        assertEquals("note-3-summary", result[0].id)
+    }
+
+    @Test
     fun `searchByKeyword is case insensitive`() {
         val note = Note(
             id = "note-4",

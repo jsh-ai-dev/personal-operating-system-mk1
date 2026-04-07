@@ -16,7 +16,7 @@ import org.springframework.data.repository.query.Param
  */
 interface NoteJpaRepository : JpaRepository<NoteJpaEntity, String> {
     /**
-     * 제목, 본문, 태그를 대상으로 부분 일치 검색을 수행합니다.
+     * 제목, 본문, AI 요약, 태그를 대상으로 부분 일치 검색을 수행합니다.
      *
      * 구현 포인트:
      * - lower(... like lower(...)) 형태로 대소문자 구분 없이 검색합니다.
@@ -31,6 +31,7 @@ interface NoteJpaRepository : JpaRepository<NoteJpaEntity, String> {
         left join note.tags tag
         where lower(note.title) like lower(concat('%', :keyword, '%'))
            or lower(note.content) like lower(concat('%', :keyword, '%'))
+           or lower(coalesce(note.aiSummary, '')) like lower(concat('%', :keyword, '%'))
            or lower(tag) like lower(concat('%', :keyword, '%'))
         order by note.updatedAt desc
         """,
