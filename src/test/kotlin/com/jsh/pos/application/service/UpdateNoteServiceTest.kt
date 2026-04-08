@@ -4,6 +4,7 @@ import com.jsh.pos.application.port.`in`.UpdateNoteUseCase
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -22,7 +23,9 @@ class UpdateNoteServiceTest {
     private val fixedClock = Clock.fixed(Instant.parse("2026-04-02T12:00:00Z"), ZoneOffset.UTC)
     private val fakeRepository = FakeNoteRepository()
     private val noteListCachePort = RecordingNoteListCachePort()
-    private val updateNoteService = UpdateNoteService(fakeRepository, fakeRepository, noteListCachePort, fixedClock)
+    private val noteSearchIndexPort = RecordingNoteSearchIndexPort()
+    private val updateNoteService =
+        UpdateNoteService(fakeRepository, fakeRepository, noteListCachePort, noteSearchIndexPort, fixedClock)
 
     @Test
     fun `updateById updates existing note and keeps createdAt`() {
@@ -53,6 +56,7 @@ class UpdateNoteServiceTest {
         assertEquals(setOf("kotlin"), result.tags)
         assertEquals(existing.createdAt, result.createdAt)
         assertEquals(Instant.parse("2026-04-02T12:00:00Z"), result.updatedAt)
+        assertEquals("note-1", noteSearchIndexPort.lastUpsertedId)
         assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
     }
 
@@ -91,6 +95,16 @@ class UpdateNoteServiceTest {
         override fun evictOwner(ownerUsername: String) {
             lastEvictedOwner = ownerUsername
         }
+    }
+
+    private class RecordingNoteSearchIndexPort : NoteSearchIndexPort {
+        var lastUpsertedId: String? = null
+
+        override fun upsert(note: Note) {
+            lastUpsertedId = note.id
+        }
+
+        override fun deleteById(id: String) = Unit
     }
 }
 

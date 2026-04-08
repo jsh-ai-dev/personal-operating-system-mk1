@@ -3,7 +3,9 @@ package com.jsh.pos.application.service
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
 import com.jsh.pos.domain.note.Note
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.util.UUID
@@ -29,6 +31,7 @@ class CreateNoteService(
     // port.out 주입: 저장 로직 (구현체는 adapter/out에서 제공)
     private val noteCommandPort: NoteCommandPort,
     private val noteListCachePort: NoteListCachePort,
+    private val noteSearchIndexPort: NoteSearchIndexPort,
     // Clock 주입: 현재 시간 (테스트에서 고정 가능)
     private val clock: Clock,
 ) : CreateNoteUseCase {
@@ -54,6 +57,10 @@ class CreateNoteService(
         // 저장소 구현이 무엇인지(JPA, Redis 등)는 알 필요 없음
         // [4-POST] 저장소 어댑터로 넘어가는 지점입니다.
         return noteCommandPort.save(note).also {
+            runCatching { noteSearchIndexPort.upsert(it) }
+                .onFailure { ex ->
+                    logger.warn("[note-search] index upsert failed after create. noteId={}, reason={}", it.id, ex.message)
+                }
             noteListCachePort.evictOwnerModes(
                 it.ownerUsername,
                 setOf(
@@ -62,6 +69,10 @@ class CreateNoteService(
                 ),
             )
         }
+    }
+
+    private companion object {
+        private val logger = LoggerFactory.getLogger(CreateNoteService::class.java)
     }
 }
 

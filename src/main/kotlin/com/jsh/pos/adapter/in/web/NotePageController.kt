@@ -74,6 +74,7 @@ class NotePageController(
         model.addAttribute("keyword", result.keyword)
         model.addAttribute("bookmarkedOnly", result.bookmarkedOnly)
         model.addAttribute("sort", result.sort)
+        model.addAttribute("highlightsById", result.highlightsById)
         model.addAttribute("tagsDisplayById", result.notes.associate { it.id to formatTags(it.tags) })
         model.addAttribute("createdAtDisplayById", result.notes.associate { it.id to formatDateTime(it.createdAt) })
         model.addAttribute("updatedAtDisplayById", result.notes.associate { it.id to formatDateTime(it.updatedAt) })

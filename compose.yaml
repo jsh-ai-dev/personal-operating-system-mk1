@@ -30,8 +30,21 @@ services:
       timeout: 5s
       retries: 10
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: pos-elasticsearch
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - pos-elasticsearch-data:/usr/share/elasticsearch/data
+
 volumes:
   pos-postgres-data:
   pos-redis-data:
+  pos-elasticsearch-data:
 
 

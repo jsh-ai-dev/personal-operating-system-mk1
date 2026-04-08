@@ -3,6 +3,7 @@ package com.jsh.pos.application.service
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteQueryPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -22,7 +23,8 @@ class DeleteNoteServiceTest {
 
     private val repository = RecordingNoteRepository()
     private val noteListCachePort = RecordingNoteListCachePort()
-    private val deleteNoteService = DeleteNoteService(repository, repository, noteListCachePort)
+    private val noteSearchIndexPort = RecordingNoteSearchIndexPort()
+    private val deleteNoteService = DeleteNoteService(repository, repository, noteListCachePort, noteSearchIndexPort)
 
     @Test
     fun `deleteById returns true when repository deletes`() {
@@ -32,6 +34,7 @@ class DeleteNoteServiceTest {
         val result = deleteNoteService.deleteById("note-1")
 
         assertTrue(result)
+        assertEquals("note-1", noteSearchIndexPort.lastDeletedId)
         assertEquals("pos-admin", noteListCachePort.lastEvictedOwner)
     }
 
@@ -62,6 +65,16 @@ class DeleteNoteServiceTest {
 
         override fun evictOwner(ownerUsername: String) {
             lastEvictedOwner = ownerUsername
+        }
+    }
+
+    private class RecordingNoteSearchIndexPort : NoteSearchIndexPort {
+        var lastDeletedId: String? = null
+
+        override fun upsert(note: Note) = Unit
+
+        override fun deleteById(id: String) {
+            lastDeletedId = id
         }
     }
 

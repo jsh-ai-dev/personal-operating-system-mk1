@@ -18,6 +18,8 @@ spring:
       host: ${POS_REDIS_HOST:localhost}
       port: ${POS_REDIS_PORT:6379}
       password: ${POS_REDIS_PASSWORD:}
+  elasticsearch:
+    uris: ${POS_ELASTICSEARCH_URIS:http://localhost:9200}
   session:
     store-type: redis
     redis:
@@ -44,6 +46,11 @@ server:
       timeout: 30m
 
 pos:
+  search:
+    elasticsearch:
+      enabled: ${POS_SEARCH_ELASTICSEARCH_ENABLED:false}
+      index-name: ${POS_SEARCH_ELASTICSEARCH_INDEX_NAME:notes-v1}
+      reindex-on-startup: ${POS_SEARCH_ELASTICSEARCH_REINDEX_ON_STARTUP:true}
   cache:
     note-list:
       key-prefix: ${POS_NOTE_LIST_CACHE_KEY_PREFIX:pos:notes:list:v1:}

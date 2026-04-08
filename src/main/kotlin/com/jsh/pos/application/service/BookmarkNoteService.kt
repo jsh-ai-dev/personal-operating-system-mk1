@@ -4,7 +4,9 @@ import com.jsh.pos.application.port.`in`.BookmarkNoteUseCase
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
 import com.jsh.pos.domain.note.Note
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 /**
@@ -30,6 +32,7 @@ class BookmarkNoteService(
     // 북마크 상태를 반영한 노트 저장용
     private val noteCommandPort: NoteCommandPort,
     private val noteListCachePort: NoteListCachePort,
+    private val noteSearchIndexPort: NoteSearchIndexPort,
 ) : BookmarkNoteUseCase {
 
     /**
@@ -46,6 +49,10 @@ class BookmarkNoteService(
 
         // 3. 저장 후 반환
         return noteCommandPort.save(bookmarked).also {
+            runCatching { noteSearchIndexPort.upsert(it) }
+                .onFailure { ex ->
+                    logger.warn("[note-search] index upsert failed after bookmark. noteId={}, reason={}", it.id, ex.message)
+                }
             noteListCachePort.evictOwner(it.ownerUsername)
         }
     }
@@ -59,8 +66,16 @@ class BookmarkNoteService(
         val note = noteQueryPort.findById(id) ?: return null
         val unbookmarked = note.unbookmark()
         return noteCommandPort.save(unbookmarked).also {
+            runCatching { noteSearchIndexPort.upsert(it) }
+                .onFailure { ex ->
+                    logger.warn("[note-search] index upsert failed after unbookmark. noteId={}, reason={}", it.id, ex.message)
+                }
             noteListCachePort.evictOwner(it.ownerUsername)
         }
+    }
+
+    private companion object {
+        private val logger = LoggerFactory.getLogger(BookmarkNoteService::class.java)
     }
 }
 

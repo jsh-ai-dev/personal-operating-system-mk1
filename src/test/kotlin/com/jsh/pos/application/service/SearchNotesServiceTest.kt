@@ -1,7 +1,8 @@
 package com.jsh.pos.application.service
 
+import com.jsh.pos.application.model.NoteSearchHit
 import com.jsh.pos.application.port.`in`.SearchNotesUseCase
-import com.jsh.pos.application.port.out.NoteQueryPort
+import com.jsh.pos.application.port.out.NoteSearchPort
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -14,37 +15,45 @@ import java.time.Instant
  */
 class SearchNotesServiceTest {
 
-    private val queryPort = FakeNoteQueryPort()
-    private val searchNotesService = SearchNotesService(queryPort)
+    private val searchPort = FakeNoteSearchPort()
+    private val searchNotesService = SearchNotesService(searchPort)
 
     @Test
-    fun `search trims keyword and delegates to query port`() {
+    fun `search trims keyword and delegates to search port`() {
         val expected = listOf(
-            sampleNote(id = "note-1", title = "kotlin", content = "content", tags = setOf("spring")),
+            NoteSearchHit(note = sampleNote(id = "note-1", title = "kotlin", content = "content", tags = setOf("spring"))),
         )
-        queryPort.nextResult = expected
+        searchPort.nextResult = expected
 
-        val result = searchNotesService.search(SearchNotesUseCase.Command(keyword = "  kotlin  "))
+        val result = searchNotesService.search(
+            SearchNotesUseCase.Command(ownerUsername = "pos-admin", keyword = "  kotlin  ", sort = "relevance"),
+        )
 
-        assertEquals("kotlin", queryPort.lastKeyword)
+        assertEquals("kotlin", searchPort.lastKeyword)
+        assertEquals("pos-admin", searchPort.lastOwnerUsername)
+        assertEquals("relevance", searchPort.lastSort)
         assertEquals(expected, result)
     }
 
     @Test
     fun `search throws when keyword is blank`() {
         assertThrows(IllegalArgumentException::class.java) {
-            searchNotesService.search(SearchNotesUseCase.Command(keyword = "   "))
+            searchNotesService.search(
+                SearchNotesUseCase.Command(ownerUsername = "pos-admin", keyword = "   ", sort = "recent"),
+            )
         }
     }
 
-    private class FakeNoteQueryPort : NoteQueryPort {
+    private class FakeNoteSearchPort : NoteSearchPort {
+        var lastOwnerUsername: String? = null
         var lastKeyword: String? = null
-        var nextResult: List<Note> = emptyList()
+        var lastSort: String? = null
+        var nextResult: List<NoteSearchHit> = emptyList()
 
-        override fun findById(id: String): Note? = null
-
-        override fun searchByKeyword(keyword: String): List<Note> {
+        override fun search(ownerUsername: String, keyword: String, sort: String): List<NoteSearchHit> {
+            lastOwnerUsername = ownerUsername
             lastKeyword = keyword
+            lastSort = sort
             return nextResult
         }
     }

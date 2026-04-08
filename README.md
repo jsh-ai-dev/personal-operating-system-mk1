@@ -12,7 +12,7 @@ AI 기반의 개인용 지식 관리 및 업무 자동화 시스템입니다.
 ## 주요 기술 스택
 
 - Kotlin, Spring Boot, JPA
-- PostgreSQL, Redis
+- PostgreSQL, Redis, Elasticsearch
 - Thymeleaf (UI)
 - JUnit (테스트)
 
@@ -43,6 +43,9 @@ curl "http://localhost:8080/api/v1/notes?bookmarkedOnly=true"
 
 # 검색 + 제목순
 curl "http://localhost:8080/api/v1/notes/search?keyword=kotlin&sort=title"
+
+# 검색 + 관련도순 (Elasticsearch 활성화 시 권장)
+curl "http://localhost:8080/api/v1/notes/search?keyword=kotlin&sort=relevance"
 
 # 북마크 API도 동일하게 정렬 파라미터 사용 가능
 curl "http://localhost:8080/api/v1/notes/bookmarks?sort=recent"
@@ -166,7 +169,7 @@ echo $env:POS_AI_PROVIDER
 
 | 대상 | 역할 | 무엇을 함 | 무엇을 안 함 |
 |---|---|---|---|
-| `compose.yaml` | 인프라 정의 | PostgreSQL, Redis 컨테이너를 띄움 | 스프링 앱 설정은 안 함 |
+| `compose.yaml` | 인프라 정의 | PostgreSQL, Redis, Elasticsearch 컨테이너를 띄움 | 스프링 앱 설정은 안 함 |
 | `.env` | 값 저장소 | DB 비밀번호, API 키, Redis 호스트 같은 값 보관 | 앱/도커를 직접 실행하진 않음 |
 | `application.yaml` | 스프링 설정 | 앱이 DB/Redis/AI에 어떻게 붙을지 설정 | DB/Redis 컨테이너를 만들진 않음 |
 | `bootRun.ps1` | 실행 보조 스크립트 | `.env`를 읽고 Docker 인프라를 띄운 뒤 `bootRun` 실행 | DB/Redis 설정 자체를 정의하진 않음 |
@@ -180,7 +183,7 @@ echo $env:POS_AI_PROVIDER
 .\bootRun.ps1 -InfraOnly
 ```
 
-이 명령은 내부적으로 `docker compose up -d postgres redis`를 실행합니다.
+이 명령은 내부적으로 `docker compose up -d postgres redis elasticsearch`를 실행합니다.
 
 #### 2) 평소처럼 앱까지 한 번에 띄우고 싶을 때
 
@@ -190,7 +193,7 @@ echo $env:POS_AI_PROVIDER
 
 이 명령은 아래 흐름으로 동작합니다.
 
-1. `docker compose up -d postgres redis`
+1. `docker compose up -d postgres redis elasticsearch`
 2. `.env` 로드
 3. `./gradlew.bat bootRun`
 
@@ -257,6 +260,21 @@ POS_REDIS_HOST=localhost
 POS_REDIS_PORT=6379
 POS_REDIS_PASSWORD=
 ```
+
+## Elasticsearch 검색 전환
+
+기본값은 DB 검색이며, 아래 환경변수를 켜면 Elasticsearch 우선 검색으로 동작합니다.
+
+```powershell
+POS_ELASTICSEARCH_URIS=http://localhost:9200
+POS_SEARCH_ELASTICSEARCH_ENABLED=true
+POS_SEARCH_ELASTICSEARCH_INDEX_NAME=notes-v1
+POS_SEARCH_ELASTICSEARCH_REINDEX_ON_STARTUP=true
+```
+
+- Elasticsearch 오류 시 검색은 DB 검색으로 자동 폴백됩니다.
+- 시작 시 기존 노트를 검색 인덱스로 백필(reindex)합니다.
+- `/notes` 검색 결과 카드에 제목/요약/본문 하이라이트 스니펫이 노출됩니다.
 
 ## 시작하기
 

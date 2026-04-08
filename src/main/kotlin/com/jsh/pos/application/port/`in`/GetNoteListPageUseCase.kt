@@ -1,5 +1,6 @@
 package com.jsh.pos.application.port.`in`
 
+import com.jsh.pos.application.model.NoteSearchHighlight
 import com.jsh.pos.domain.note.Note
 
 interface GetNoteListPageUseCase {
@@ -17,6 +18,7 @@ interface GetNoteListPageUseCase {
         val keyword: String,
         val bookmarkedOnly: Boolean,
         val sort: String,
+        val highlightsById: Map<String, NoteSearchHighlight> = emptyMap(),
     )
 }
 

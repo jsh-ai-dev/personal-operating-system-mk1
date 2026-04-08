@@ -4,6 +4,8 @@ import com.jsh.pos.application.port.`in`.DeleteNoteUseCase
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
 /**
@@ -19,6 +21,7 @@ class DeleteNoteService(
     private val noteQueryPort: NoteQueryPort,
     private val noteCommandPort: NoteCommandPort,
     private val noteListCachePort: NoteListCachePort,
+    private val noteSearchIndexPort: NoteSearchIndexPort,
 ) : DeleteNoteUseCase {
 
     override fun deleteById(id: String): Boolean {
@@ -28,9 +31,17 @@ class DeleteNoteService(
         val existing = noteQueryPort.findById(id) ?: return false
         val deleted = noteCommandPort.deleteById(id)
         if (deleted) {
+            runCatching { noteSearchIndexPort.deleteById(id) }
+                .onFailure { ex ->
+                    logger.warn("[note-search] index delete failed after delete. noteId={}, reason={}", id, ex.message)
+                }
             noteListCachePort.evictOwner(existing.ownerUsername)
         }
         return deleted
+    }
+
+    private companion object {
+        private val logger = LoggerFactory.getLogger(DeleteNoteService::class.java)
     }
 }
 

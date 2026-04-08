@@ -28,6 +28,7 @@
         <select class="input input-inline" name="sort">
             <option value="recent" th:selected="${sort == 'recent'}">최신 수정순</option>
             <option value="title" th:selected="${sort == 'title'}">제목순</option>
+            <option value="relevance" th:selected="${sort == 'relevance'}">관련도순</option>
         </select>
         <label class="checkbox-inline">
             <input type="checkbox" name="bookmarkedOnly" value="true" th:checked="${bookmarkedOnly}">
@@ -62,6 +63,11 @@
                 <span th:text="${tagsDisplayById[note.id]}">-</span>
                 <span>생성: <strong th:text="${createdAtDisplayById[note.id]}">-</strong></span>
                 <span>수정: <strong th:text="${updatedAtDisplayById[note.id]}">-</strong></span>
+            </div>
+            <div class="search-snippet" th:if="${highlightsById != null and highlightsById[note.id] != null}">
+                <p th:if="${highlightsById[note.id].title != null}">제목: <span th:utext="${highlightsById[note.id].title}">-</span></p>
+                <p th:if="${highlightsById[note.id].summary != null}">요약: <span th:utext="${highlightsById[note.id].summary}">-</span></p>
+                <p th:if="${highlightsById[note.id].content != null}">본문: <span th:utext="${highlightsById[note.id].content}">-</span></p>
             </div>
         </article>
     </section>

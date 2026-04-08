@@ -3,6 +3,7 @@ package com.jsh.pos.application.service
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteQueryPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -27,7 +28,8 @@ class BookmarkNoteServiceTest {
     // 인메모리 포트: 두 포트를 동시에 구현해 의존성 연결
     private val store = InMemoryNoteStore()
     private val noteListCachePort = RecordingNoteListCachePort()
-    private val bookmarkNoteService = BookmarkNoteService(store, store, noteListCachePort)
+    private val noteSearchIndexPort = RecordingNoteSearchIndexPort()
+    private val bookmarkNoteService = BookmarkNoteService(store, store, noteListCachePort, noteSearchIndexPort)
     private val getBookmarkedNotesService = GetBookmarkedNotesService(store)
 
     /**
@@ -41,6 +43,7 @@ class BookmarkNoteServiceTest {
 
         assertNotNull(result)
         assertTrue(result!!.bookmarked)
+        assertEquals("note-1", noteSearchIndexPort.lastUpsertedId)
         assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
     }
 
@@ -80,6 +83,7 @@ class BookmarkNoteServiceTest {
 
         assertNotNull(result)
         assertFalse(result!!.bookmarked)
+        assertEquals("note-3", noteSearchIndexPort.lastUpsertedId)
         assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
     }
 
@@ -158,6 +162,16 @@ class BookmarkNoteServiceTest {
         override fun evictOwner(ownerUsername: String) {
             lastEvictedOwner = ownerUsername
         }
+    }
+
+    private class RecordingNoteSearchIndexPort : NoteSearchIndexPort {
+        var lastUpsertedId: String? = null
+
+        override fun upsert(note: Note) {
+            lastUpsertedId = note.id
+        }
+
+        override fun deleteById(id: String) = Unit
     }
 }
 

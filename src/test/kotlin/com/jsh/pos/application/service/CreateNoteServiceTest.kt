@@ -3,6 +3,7 @@ package com.jsh.pos.application.service
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
+import com.jsh.pos.application.port.out.NoteSearchIndexPort
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -37,9 +38,10 @@ class CreateNoteServiceTest {
     // Mock 저장소: 실제 DB 없이 메모리에만 저장
     private val noteCommandPort = InMemoryNoteCommandPort()
     private val noteListCachePort = RecordingNoteListCachePort()
+    private val noteSearchIndexPort = RecordingNoteSearchIndexPort()
 
     // 테스트 대상: CreateNoteService (의존성은 위에서 주입)
-    private val createNoteService = CreateNoteService(noteCommandPort, noteListCachePort, fixedClock)
+    private val createNoteService = CreateNoteService(noteCommandPort, noteListCachePort, noteSearchIndexPort, fixedClock)
 
     /**
      * 테스트: 노트 생성 시 필드가 올바르게 정제되고 저장되는가?
@@ -70,6 +72,7 @@ class CreateNoteServiceTest {
 
         // 태그 정제 확인: " kotlin " -> "kotlin", " " 제외, "spring" 유지, 중복 제외
         assertEquals(setOf("kotlin", "spring"), created.tags)
+        assertEquals(created.id, noteSearchIndexPort.lastUpsertedId)
         assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
         assertEquals(
             setOf(NoteListCachePort.Mode.ALL, NoteListCachePort.Mode.SEARCH),
@@ -129,6 +132,16 @@ class CreateNoteServiceTest {
             lastEvictedOwner = ownerUsername
             lastEvictedModes = modes
         }
+    }
+
+    private class RecordingNoteSearchIndexPort : NoteSearchIndexPort {
+        var lastUpsertedId: String? = null
+
+        override fun upsert(note: Note) {
+            lastUpsertedId = note.id
+        }
+
+        override fun deleteById(id: String) = Unit
     }
 }
 
