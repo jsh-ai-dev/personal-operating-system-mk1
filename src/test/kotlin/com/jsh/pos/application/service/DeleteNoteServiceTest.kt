@@ -1,10 +1,15 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.out.NoteCommandPort
+import com.jsh.pos.application.port.out.NoteListCachePort
+import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
+import com.jsh.pos.domain.note.Visibility
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 /**
  * DeleteNoteService 단위 테스트입니다.
@@ -15,33 +20,60 @@ import org.junit.jupiter.api.Test
  */
 class DeleteNoteServiceTest {
 
-    private val commandPort = RecordingNoteCommandPort()
-    private val deleteNoteService = DeleteNoteService(commandPort)
+    private val repository = RecordingNoteRepository()
+    private val noteListCachePort = RecordingNoteListCachePort()
+    private val deleteNoteService = DeleteNoteService(repository, repository, noteListCachePort)
 
     @Test
     fun `deleteById returns true when repository deletes`() {
-        commandPort.nextDeleteResult = true
+        repository.note = sampleNote("note-1")
+        repository.nextDeleteResult = true
 
         val result = deleteNoteService.deleteById("note-1")
 
         assertTrue(result)
+        assertEquals("pos-admin", noteListCachePort.lastEvictedOwner)
     }
 
     @Test
     fun `deleteById returns false when repository does not find target`() {
-        commandPort.nextDeleteResult = false
+        repository.note = null
 
         val result = deleteNoteService.deleteById("missing-note")
 
         assertFalse(result)
     }
 
-    private class RecordingNoteCommandPort : NoteCommandPort {
+    private class RecordingNoteRepository : NoteCommandPort, NoteQueryPort {
+        var note: Note? = null
         var nextDeleteResult: Boolean = false
 
         override fun save(note: Note): Note = note
 
         override fun deleteById(id: String): Boolean = nextDeleteResult
+
+        override fun findById(id: String): Note? = note
     }
+
+    private class RecordingNoteListCachePort : NoteListCachePort {
+        var lastEvictedOwner: String? = null
+
+        override fun getOrLoad(query: NoteListCachePort.Query, loader: () -> List<Note>): List<Note> = loader()
+
+        override fun evictOwner(ownerUsername: String) {
+            lastEvictedOwner = ownerUsername
+        }
+    }
+
+    private fun sampleNote(id: String): Note = Note(
+        id = id,
+        ownerUsername = "pos-admin",
+        title = "title",
+        content = "content",
+        visibility = Visibility.PRIVATE,
+        tags = emptySet(),
+        createdAt = Instant.parse("2026-04-01T00:00:00Z"),
+        updatedAt = Instant.parse("2026-04-01T00:00:00Z"),
+    )
 }
 

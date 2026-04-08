@@ -1,6 +1,7 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.`in`.SaveNoteSummaryUseCase
+import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
@@ -19,10 +20,12 @@ class SaveNoteSummaryServiceTest {
     private val fixedClock: Clock = Clock.fixed(fixedNow, ZoneOffset.UTC)
     private val noteQueryPort = FakeNoteQueryPort()
     private val noteCommandPort = FakeNoteCommandPort()
+    private val noteListCachePort = RecordingNoteListCachePort()
 
     private val service = SaveNoteSummaryService(
         noteQueryPort = noteQueryPort,
         noteCommandPort = noteCommandPort,
+        noteListCachePort = noteListCachePort,
         clock = fixedClock,
     )
 
@@ -44,6 +47,7 @@ class SaveNoteSummaryServiceTest {
 
         assertEquals("저장할 요약", result?.aiSummary)
         assertEquals(fixedNow, result?.updatedAt)
+        assertEquals("pos-admin", noteListCachePort.lastEvictedOwner)
     }
 
     @Test
@@ -63,6 +67,16 @@ class SaveNoteSummaryServiceTest {
     private class FakeNoteCommandPort : NoteCommandPort {
         override fun save(note: Note): Note = note
         override fun deleteById(id: String): Boolean = false
+    }
+
+    private class RecordingNoteListCachePort : NoteListCachePort {
+        var lastEvictedOwner: String? = null
+
+        override fun getOrLoad(query: NoteListCachePort.Query, loader: () -> List<Note>): List<Note> = loader()
+
+        override fun evictOwner(ownerUsername: String) {
+            lastEvictedOwner = ownerUsername
+        }
     }
 
     companion object {

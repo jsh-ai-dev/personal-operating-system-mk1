@@ -12,6 +12,16 @@ spring:
     url: ${POS_DB_URL:jdbc:postgresql://localhost:5432/personal_operating_system}
     username: ${POS_DB_USERNAME:pos}
     password: ${POS_DB_PASSWORD:pos}
+  data:
+    redis:
+      # Redis 기본값: 로컬 docker compose 서비스(redis:6379)
+      host: ${POS_REDIS_HOST:localhost}
+      port: ${POS_REDIS_PORT:6379}
+      password: ${POS_REDIS_PASSWORD:}
+  session:
+    store-type: redis
+    redis:
+      namespace: pos:session
   jpa:
     hibernate:
       # 개발 초기에는 update가 가장 편합니다.
@@ -28,7 +38,16 @@ spring:
     init:
       mode: never
 
+server:
+  servlet:
+    session:
+      timeout: 30m
+
 pos:
+  cache:
+    note-list:
+      key-prefix: ${POS_NOTE_LIST_CACHE_KEY_PREFIX:pos:notes:list:v1:}
+      ttl: ${POS_NOTE_LIST_CACHE_TTL:PT5M}
   auth:
     seed:
       # 서버 시작 시 초기 계정이 없으면 생성되고, 있으면 최소 동기화됩니다.

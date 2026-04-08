@@ -3,10 +3,8 @@ package com.jsh.pos.adapter.`in`.web
 import com.jsh.pos.application.port.`in`.BookmarkNoteUseCase
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
 import com.jsh.pos.application.port.`in`.DeleteNoteUseCase
-import com.jsh.pos.application.port.`in`.GetAllNotesUseCase
-import com.jsh.pos.application.port.`in`.GetBookmarkedNotesUseCase
 import com.jsh.pos.application.port.`in`.GetNoteUseCase
-import com.jsh.pos.application.port.`in`.SearchNotesUseCase
+import com.jsh.pos.application.port.`in`.GetNoteListPageUseCase
 import com.jsh.pos.application.port.`in`.SaveNoteSummaryUseCase
 import com.jsh.pos.application.port.`in`.SummarizeUseCase
 import com.jsh.pos.application.port.`in`.UpdateNoteUseCase
@@ -48,13 +46,11 @@ class NotePageController(
     private val createNoteUseCase: CreateNoteUseCase,
     private val getNoteUseCase: GetNoteUseCase,
     private val updateNoteUseCase: UpdateNoteUseCase,
-    private val searchNotesUseCase: SearchNotesUseCase,
+    private val getNoteListPageUseCase: GetNoteListPageUseCase,
     private val summarizeUseCase: SummarizeUseCase,
     private val saveNoteSummaryUseCase: SaveNoteSummaryUseCase,
     private val deleteNoteUseCase: DeleteNoteUseCase,
     private val bookmarkNoteUseCase: BookmarkNoteUseCase,
-    private val getBookmarkedNotesUseCase: GetBookmarkedNotesUseCase,
-    private val getAllNotesUseCase: GetAllNotesUseCase,
 ) {
 
     @GetMapping
@@ -65,24 +61,22 @@ class NotePageController(
         model: Model,
         authentication: Authentication? = null,
     ): String {
-        val currentUsername = currentUsername(authentication)
-        val normalizedKeyword = keyword?.trim().orEmpty()
-        val notes = when {
-            normalizedKeyword.isNotBlank() -> searchNotesUseCase.search(SearchNotesUseCase.Command(normalizedKeyword))
-            bookmarkedOnly -> getBookmarkedNotesUseCase.getBookmarked()
-            else -> getAllNotesUseCase.getAll()
-        }
-        val ownedNotes = notes.filter { it.ownerUsername == currentUsername }
-        val normalizedSort = normalizeSort(sort)
-        val sortedNotes = sortNotes(ownedNotes, normalizedSort)
+        val result = getNoteListPageUseCase.get(
+            GetNoteListPageUseCase.Command(
+                ownerUsername = currentUsername(authentication),
+                keyword = keyword,
+                bookmarkedOnly = bookmarkedOnly,
+                sort = sort,
+            ),
+        )
 
-        model.addAttribute("notes", sortedNotes)
-        model.addAttribute("keyword", normalizedKeyword)
-        model.addAttribute("bookmarkedOnly", bookmarkedOnly)
-        model.addAttribute("sort", normalizedSort)
-        model.addAttribute("tagsDisplayById", sortedNotes.associate { it.id to formatTags(it.tags) })
-        model.addAttribute("createdAtDisplayById", sortedNotes.associate { it.id to formatDateTime(it.createdAt) })
-        model.addAttribute("updatedAtDisplayById", sortedNotes.associate { it.id to formatDateTime(it.updatedAt) })
+        model.addAttribute("notes", result.notes)
+        model.addAttribute("keyword", result.keyword)
+        model.addAttribute("bookmarkedOnly", result.bookmarkedOnly)
+        model.addAttribute("sort", result.sort)
+        model.addAttribute("tagsDisplayById", result.notes.associate { it.id to formatTags(it.tags) })
+        model.addAttribute("createdAtDisplayById", result.notes.associate { it.id to formatDateTime(it.createdAt) })
+        model.addAttribute("updatedAtDisplayById", result.notes.associate { it.id to formatDateTime(it.updatedAt) })
         return "notes/list"
     }
 
@@ -551,14 +545,6 @@ class NotePageController(
         return if (normalized in ALLOWED_SUMMARY_MODEL_TIERS) normalized else DEFAULT_SUMMARY_MODEL_TIER
     }
 
-    private fun normalizeSort(sort: String): String =
-        if (sort.equals("title", ignoreCase = true)) "title" else "recent"
-
-    private fun sortNotes(notes: List<Note>, sort: String): List<Note> =
-        when (sort) {
-            "title" -> notes.sortedBy { it.title.lowercase(Locale.getDefault()) }
-            else -> notes.sortedWith(compareByDescending<Note> { it.updatedAt }.thenByDescending { it.createdAt })
-        }
 
     private fun formatDateTime(value: Instant): String = DISPLAY_DATE_FORMATTER.format(value)
 

@@ -3,11 +3,9 @@ package com.jsh.pos.adapter.`in`.web
 import com.jsh.pos.application.port.`in`.BookmarkNoteUseCase
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
 import com.jsh.pos.application.port.`in`.DeleteNoteUseCase
-import com.jsh.pos.application.port.`in`.GetAllNotesUseCase
-import com.jsh.pos.application.port.`in`.GetBookmarkedNotesUseCase
 import com.jsh.pos.application.port.`in`.GetNoteUseCase
+import com.jsh.pos.application.port.`in`.GetNoteListPageUseCase
 import com.jsh.pos.application.port.`in`.SaveNoteSummaryUseCase
-import com.jsh.pos.application.port.`in`.SearchNotesUseCase
 import com.jsh.pos.application.port.`in`.SummarizeUseCase
 import com.jsh.pos.application.port.`in`.UpdateNoteUseCase
 import com.jsh.pos.domain.note.Note
@@ -29,48 +27,55 @@ class NotePageControllerTest {
     private val createUseCase = FakeCreateUseCase()
     private val getUseCase = FakeGetUseCase()
     private val updateUseCase = FakeUpdateUseCase()
-    private val searchUseCase = FakeSearchUseCase()
+    private val noteListPageService = FakeGetNoteListPageService()
     private val summarizeUseCase = FakeSummarizeUseCase()
     private val saveSummaryUseCase = FakeSaveSummaryUseCase()
     private val deleteUseCase = FakeDeleteUseCase()
     private val bookmarkUseCase = FakeBookmarkUseCase()
-    private val bookmarkedUseCase = FakeGetBookmarkedUseCase()
-    private val getAllUseCase = FakeGetAllUseCase()
 
     private val controller = NotePageController(
         createNoteUseCase = createUseCase,
         getNoteUseCase = getUseCase,
         updateNoteUseCase = updateUseCase,
-        searchNotesUseCase = searchUseCase,
+        getNoteListPageUseCase = noteListPageService,
         summarizeUseCase = summarizeUseCase,
         saveNoteSummaryUseCase = saveSummaryUseCase,
         deleteNoteUseCase = deleteUseCase,
         bookmarkNoteUseCase = bookmarkUseCase,
-        getBookmarkedNotesUseCase = bookmarkedUseCase,
-        getAllNotesUseCase = getAllUseCase,
     )
 
     @Test
     fun `list uses getAll when no filter`() {
-        getAllUseCase.notes = listOf(sampleNote("note-1", "제목"))
+        noteListPageService.nextResult = GetNoteListPageUseCase.Result(
+            notes = listOf(sampleNote("note-1", "제목")),
+            keyword = "",
+            bookmarkedOnly = false,
+            sort = "recent",
+        )
 
         val model = ExtendedModelMap()
         val viewName = controller.list(keyword = null, bookmarkedOnly = false, model = model)
 
         assertEquals("notes/list", viewName)
         assertEquals(1, (model["notes"] as List<*>).size)
-        assertEquals(1, getAllUseCase.callCount)
+        assertEquals(false, noteListPageService.lastCommand?.bookmarkedOnly)
+        assertEquals("recent", noteListPageService.lastCommand?.sort)
     }
 
     @Test
     fun `list uses search when keyword exists`() {
-        searchUseCase.notes = listOf(sampleNote("note-s-1", "검색 결과", tags = setOf("spring", "kotlin")))
+        noteListPageService.nextResult = GetNoteListPageUseCase.Result(
+            notes = listOf(sampleNote("note-s-1", "검색 결과", tags = setOf("spring", "kotlin"))),
+            keyword = "kotlin",
+            bookmarkedOnly = false,
+            sort = "recent",
+        )
 
         val model = ExtendedModelMap()
         val viewName = controller.list(keyword = "  kotlin  ", bookmarkedOnly = false, model = model)
 
         assertEquals("notes/list", viewName)
-        assertEquals("kotlin", searchUseCase.lastKeyword)
+        assertEquals("  kotlin  ", noteListPageService.lastCommand?.keyword)
         assertEquals("kotlin", model["keyword"])
         assertEquals(1, (model["notes"] as List<*>).size)
         val tagsDisplayById = model["tagsDisplayById"] as Map<*, *>
@@ -79,21 +84,31 @@ class NotePageControllerTest {
 
     @Test
     fun `list uses bookmarked when bookmarkedOnly true`() {
-        bookmarkedUseCase.notes = listOf(sampleNote("note-b-1", "북마크", bookmarked = true))
+        noteListPageService.nextResult = GetNoteListPageUseCase.Result(
+            notes = listOf(sampleNote("note-b-1", "북마크", bookmarked = true)),
+            keyword = "",
+            bookmarkedOnly = true,
+            sort = "recent",
+        )
 
         val model = ExtendedModelMap()
         val viewName = controller.list(keyword = null, bookmarkedOnly = true, model = model)
 
         assertEquals("notes/list", viewName)
-        assertEquals(1, bookmarkedUseCase.callCount)
+        assertEquals(true, noteListPageService.lastCommand?.bookmarkedOnly)
         assertEquals(1, (model["notes"] as List<*>).size)
     }
 
     @Test
     fun `list sorts by title when sort is title`() {
-        getAllUseCase.notes = listOf(
-            sampleNote("note-2", "z-title"),
-            sampleNote("note-1", "a-title"),
+        noteListPageService.nextResult = GetNoteListPageUseCase.Result(
+            notes = listOf(
+                sampleNote("note-1", "a-title"),
+                sampleNote("note-2", "z-title"),
+            ),
+            keyword = "",
+            bookmarkedOnly = false,
+            sort = "title",
         )
 
         val model = ExtendedModelMap()
@@ -106,17 +121,22 @@ class NotePageControllerTest {
 
     @Test
     fun `list falls back to recent sort and exposes date display maps`() {
-        getAllUseCase.notes = listOf(
-            sampleNote(
-                id = "older",
-                title = "old",
-                updatedAt = Instant.parse("2026-04-01T00:00:00Z"),
+        noteListPageService.nextResult = GetNoteListPageUseCase.Result(
+            notes = listOf(
+                sampleNote(
+                    id = "newer",
+                    title = "new",
+                    updatedAt = Instant.parse("2026-04-02T00:00:00Z"),
+                ),
+                sampleNote(
+                    id = "older",
+                    title = "old",
+                    updatedAt = Instant.parse("2026-04-01T00:00:00Z"),
+                ),
             ),
-            sampleNote(
-                id = "newer",
-                title = "new",
-                updatedAt = Instant.parse("2026-04-02T00:00:00Z"),
-            ),
+            keyword = "",
+            bookmarkedOnly = false,
+            sort = "recent",
         )
 
         val model = ExtendedModelMap()
@@ -562,13 +582,13 @@ class NotePageControllerTest {
         }
     }
 
-    private class FakeSearchUseCase : SearchNotesUseCase {
-        var lastKeyword: String? = null
-        var notes: List<Note> = emptyList()
+    private class FakeGetNoteListPageService : GetNoteListPageUseCase {
+        var lastCommand: GetNoteListPageUseCase.Command? = null
+        var nextResult: GetNoteListPageUseCase.Result = GetNoteListPageUseCase.Result(emptyList(), "", false, "recent")
 
-        override fun search(command: SearchNotesUseCase.Command): List<Note> {
-            lastKeyword = command.keyword
-            return notes
+        override fun get(command: GetNoteListPageUseCase.Command): GetNoteListPageUseCase.Result {
+            lastCommand = command
+            return nextResult
         }
     }
 
@@ -603,25 +623,6 @@ class NotePageControllerTest {
         override fun unbookmark(id: String): Note? = unbookmarkResult
     }
 
-    private class FakeGetBookmarkedUseCase : GetBookmarkedNotesUseCase {
-        var callCount: Int = 0
-        var notes: List<Note> = emptyList()
-
-        override fun getBookmarked(): List<Note> {
-            callCount += 1
-            return notes
-        }
-    }
-
-    private class FakeGetAllUseCase : GetAllNotesUseCase {
-        var callCount: Int = 0
-        var notes: List<Note> = emptyList()
-
-        override fun getAll(): List<Note> {
-            callCount += 1
-            return notes
-        }
-    }
 
     companion object {
         private fun sampleNote(

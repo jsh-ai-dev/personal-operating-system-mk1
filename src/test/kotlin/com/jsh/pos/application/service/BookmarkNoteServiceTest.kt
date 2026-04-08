@@ -1,6 +1,7 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.out.NoteCommandPort
+import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
@@ -25,7 +26,8 @@ class BookmarkNoteServiceTest {
 
     // 인메모리 포트: 두 포트를 동시에 구현해 의존성 연결
     private val store = InMemoryNoteStore()
-    private val bookmarkNoteService = BookmarkNoteService(store, store)
+    private val noteListCachePort = RecordingNoteListCachePort()
+    private val bookmarkNoteService = BookmarkNoteService(store, store, noteListCachePort)
     private val getBookmarkedNotesService = GetBookmarkedNotesService(store)
 
     /**
@@ -39,6 +41,7 @@ class BookmarkNoteServiceTest {
 
         assertNotNull(result)
         assertTrue(result!!.bookmarked)
+        assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
     }
 
     /**
@@ -77,6 +80,7 @@ class BookmarkNoteServiceTest {
 
         assertNotNull(result)
         assertFalse(result!!.bookmarked)
+        assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
     }
 
     /**
@@ -144,6 +148,16 @@ class BookmarkNoteServiceTest {
 
         override fun findAllBookmarked(): List<Note> =
             notes.values.filter { it.bookmarked }.sortedByDescending { it.updatedAt }
+    }
+
+    private class RecordingNoteListCachePort : NoteListCachePort {
+        var lastEvictedOwner: String? = null
+
+        override fun getOrLoad(query: NoteListCachePort.Query, loader: () -> List<Note>): List<Note> = loader()
+
+        override fun evictOwner(ownerUsername: String) {
+            lastEvictedOwner = ownerUsername
+        }
     }
 }
 

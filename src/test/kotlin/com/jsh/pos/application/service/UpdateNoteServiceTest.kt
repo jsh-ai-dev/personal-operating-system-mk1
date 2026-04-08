@@ -1,6 +1,7 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.`in`.UpdateNoteUseCase
+import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
@@ -20,7 +21,8 @@ class UpdateNoteServiceTest {
 
     private val fixedClock = Clock.fixed(Instant.parse("2026-04-02T12:00:00Z"), ZoneOffset.UTC)
     private val fakeRepository = FakeNoteRepository()
-    private val updateNoteService = UpdateNoteService(fakeRepository, fakeRepository, fixedClock)
+    private val noteListCachePort = RecordingNoteListCachePort()
+    private val updateNoteService = UpdateNoteService(fakeRepository, fakeRepository, noteListCachePort, fixedClock)
 
     @Test
     fun `updateById updates existing note and keeps createdAt`() {
@@ -51,6 +53,7 @@ class UpdateNoteServiceTest {
         assertEquals(setOf("kotlin"), result.tags)
         assertEquals(existing.createdAt, result.createdAt)
         assertEquals(Instant.parse("2026-04-02T12:00:00Z"), result.updatedAt)
+        assertEquals("anonymousUser", noteListCachePort.lastEvictedOwner)
     }
 
     @Test
@@ -78,6 +81,16 @@ class UpdateNoteServiceTest {
         override fun findById(id: String): Note? = store[id]
 
         override fun deleteById(id: String): Boolean = store.remove(id) != null
+    }
+
+    private class RecordingNoteListCachePort : NoteListCachePort {
+        var lastEvictedOwner: String? = null
+
+        override fun getOrLoad(query: NoteListCachePort.Query, loader: () -> List<Note>): List<Note> = loader()
+
+        override fun evictOwner(ownerUsername: String) {
+            lastEvictedOwner = ownerUsername
+        }
     }
 }
 

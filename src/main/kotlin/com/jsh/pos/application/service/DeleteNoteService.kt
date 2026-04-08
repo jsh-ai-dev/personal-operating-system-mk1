@@ -1,7 +1,9 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.`in`.DeleteNoteUseCase
+import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
+import com.jsh.pos.application.port.out.NoteQueryPort
 import org.springframework.stereotype.Service
 
 /**
@@ -14,14 +16,21 @@ import org.springframework.stereotype.Service
  */
 @Service
 class DeleteNoteService(
+    private val noteQueryPort: NoteQueryPort,
     private val noteCommandPort: NoteCommandPort,
+    private val noteListCachePort: NoteListCachePort,
 ) : DeleteNoteUseCase {
 
     override fun deleteById(id: String): Boolean {
         // [2-DELETE] 삭제 유스케이스 계층입니다.
         // 현재는 단순 위임이지만, 나중에 soft delete/감사로그가 들어갈 자리입니다.
         // [4-DELETE] 실제 삭제는 저장소 어댑터가 수행합니다.
-        return noteCommandPort.deleteById(id)
+        val existing = noteQueryPort.findById(id) ?: return false
+        val deleted = noteCommandPort.deleteById(id)
+        if (deleted) {
+            noteListCachePort.evictOwner(existing.ownerUsername)
+        }
+        return deleted
     }
 }
 

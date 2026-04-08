@@ -3,9 +3,8 @@ package com.jsh.pos.adapter.`in`.web
 import com.jsh.pos.application.port.`in`.BookmarkNoteUseCase
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
 import com.jsh.pos.application.port.`in`.DeleteNoteUseCase
-import com.jsh.pos.application.port.`in`.GetBookmarkedNotesUseCase
 import com.jsh.pos.application.port.`in`.GetNoteUseCase
-import com.jsh.pos.application.port.`in`.SearchNotesUseCase
+import com.jsh.pos.application.port.`in`.GetNoteListPageUseCase
 import com.jsh.pos.application.port.`in`.UpdateNoteUseCase
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
@@ -63,7 +62,7 @@ class NoteControllerTest {
     lateinit var deleteNoteUseCase: DeleteNoteUseCase
 
     @MockBean
-    lateinit var searchNotesUseCase: SearchNotesUseCase
+    lateinit var getNoteListPageUseCase: GetNoteListPageUseCase
 
     @MockBean
     lateinit var updateNoteUseCase: UpdateNoteUseCase
@@ -72,8 +71,40 @@ class NoteControllerTest {
     @MockBean
     lateinit var bookmarkNoteUseCase: BookmarkNoteUseCase
 
-    @MockBean
-    lateinit var getBookmarkedNotesUseCase: GetBookmarkedNotesUseCase
+            @Test
+            fun `GET note list returns notes`() {
+                        given(
+                            getNoteListPageUseCase.get(
+                                GetNoteListPageUseCase.Command(
+                                    ownerUsername = "anonymousUser",
+                                    keyword = null,
+                                    bookmarkedOnly = false,
+                                    sort = "recent",
+                                ),
+                            ),
+                        ).willReturn(
+                    GetNoteListPageUseCase.Result(
+                        notes = listOf(
+                            Note(
+                                id = "note-list-1",
+                                title = "list title",
+                                content = "list content",
+                                visibility = Visibility.PRIVATE,
+                                tags = setOf("list"),
+                                createdAt = Instant.now(),
+                                updatedAt = Instant.now(),
+                            ),
+                        ),
+                        keyword = "",
+                        bookmarkedOnly = false,
+                        sort = "recent",
+                    ),
+                )
+
+                mockMvc.perform(get("/api/v1/notes"))
+                    .andExpect(status().isOk)
+                    .andExpect(jsonPath("$[0].id").value("note-list-1"))
+            }
 
     /**
      * 테스트: POST /api/v1/notes로 노트를 생성하면 201 Created를 반환하는가?
@@ -259,19 +290,32 @@ class NoteControllerTest {
      */
     @Test
     fun `GET search returns matched notes`() {
-        val command = SearchNotesUseCase.Command(keyword = "kotlin")
-        given(searchNotesUseCase.search(command)).willReturn(
-            listOf(
-                Note(
-                    id = "note-1",
-                    title = "kotlin memo",
-                    content = "clean architecture",
-                    visibility = Visibility.PUBLIC,
-                    tags = setOf("kotlin"),
-                    bookmarked = false,
-                    createdAt = Instant.now(),
-                    updatedAt = Instant.now(),
+        given(
+            getNoteListPageUseCase.get(
+                GetNoteListPageUseCase.Command(
+                    ownerUsername = "anonymousUser",
+                    keyword = "kotlin",
+                    bookmarkedOnly = false,
+                    sort = "recent",
                 ),
+            ),
+        ).willReturn(
+            GetNoteListPageUseCase.Result(
+                notes = listOf(
+                    Note(
+                        id = "note-1",
+                        title = "kotlin memo",
+                        content = "clean architecture",
+                        visibility = Visibility.PUBLIC,
+                        tags = setOf("kotlin"),
+                        bookmarked = false,
+                        createdAt = Instant.now(),
+                        updatedAt = Instant.now(),
+                    ),
+                ),
+                keyword = "kotlin",
+                bookmarkedOnly = false,
+                sort = "recent",
             ),
         )
 
@@ -286,9 +330,6 @@ class NoteControllerTest {
      */
     @Test
     fun `GET search returns 400 when keyword is blank`() {
-        given(searchNotesUseCase.search(SearchNotesUseCase.Command(keyword = "   ")))
-            .willThrow(IllegalArgumentException("검색어는 비워둘 수 없습니다"))
-
         mockMvc.perform(get("/api/v1/notes/search").param("keyword", "   "))
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.error").value("Bad Request"))
@@ -301,18 +342,32 @@ class NoteControllerTest {
      */
     @Test
     fun `GET bookmarks returns bookmarked notes`() {
-        given(getBookmarkedNotesUseCase.getBookmarked()).willReturn(
-            listOf(
-                Note(
-                    id = "note-bm-1",
-                    title = "북마크된 메모",
-                    content = "자주 보는 내용",
-                    visibility = Visibility.PRIVATE,
-                    tags = setOf("중요"),
-                    bookmarked = true,
-                    createdAt = Instant.now(),
-                    updatedAt = Instant.now(),
+        given(
+            getNoteListPageUseCase.get(
+                GetNoteListPageUseCase.Command(
+                    ownerUsername = "anonymousUser",
+                    keyword = null,
+                    bookmarkedOnly = true,
+                    sort = "recent",
                 ),
+            ),
+        ).willReturn(
+            GetNoteListPageUseCase.Result(
+                notes = listOf(
+                    Note(
+                        id = "note-bm-1",
+                        title = "북마크된 메모",
+                        content = "자주 보는 내용",
+                        visibility = Visibility.PRIVATE,
+                        tags = setOf("중요"),
+                        bookmarked = true,
+                        createdAt = Instant.now(),
+                        updatedAt = Instant.now(),
+                    ),
+                ),
+                keyword = "",
+                bookmarkedOnly = true,
+                sort = "recent",
             ),
         )
 

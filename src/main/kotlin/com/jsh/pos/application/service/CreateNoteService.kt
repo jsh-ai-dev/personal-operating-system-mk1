@@ -1,6 +1,7 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
+import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.domain.note.Note
 import org.springframework.stereotype.Service
@@ -27,6 +28,7 @@ import java.util.UUID
 class CreateNoteService(
     // port.out 주입: 저장 로직 (구현체는 adapter/out에서 제공)
     private val noteCommandPort: NoteCommandPort,
+    private val noteListCachePort: NoteListCachePort,
     // Clock 주입: 현재 시간 (테스트에서 고정 가능)
     private val clock: Clock,
 ) : CreateNoteUseCase {
@@ -51,7 +53,15 @@ class CreateNoteService(
         // 2. 저장소를 통해 영속화 (포트 위임)
         // 저장소 구현이 무엇인지(JPA, Redis 등)는 알 필요 없음
         // [4-POST] 저장소 어댑터로 넘어가는 지점입니다.
-        return noteCommandPort.save(note)
+        return noteCommandPort.save(note).also {
+            noteListCachePort.evictOwnerModes(
+                it.ownerUsername,
+                setOf(
+                    NoteListCachePort.Mode.ALL,
+                    NoteListCachePort.Mode.SEARCH,
+                ),
+            )
+        }
     }
 }
 

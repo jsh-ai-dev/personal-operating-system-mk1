@@ -1,6 +1,7 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.port.`in`.BookmarkNoteUseCase
+import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
@@ -28,6 +29,7 @@ class BookmarkNoteService(
     private val noteQueryPort: NoteQueryPort,
     // 북마크 상태를 반영한 노트 저장용
     private val noteCommandPort: NoteCommandPort,
+    private val noteListCachePort: NoteListCachePort,
 ) : BookmarkNoteUseCase {
 
     /**
@@ -43,7 +45,9 @@ class BookmarkNoteService(
         val bookmarked = note.bookmark()
 
         // 3. 저장 후 반환
-        return noteCommandPort.save(bookmarked)
+        return noteCommandPort.save(bookmarked).also {
+            noteListCachePort.evictOwner(it.ownerUsername)
+        }
     }
 
     /**
@@ -54,7 +58,9 @@ class BookmarkNoteService(
     override fun unbookmark(id: String): Note? {
         val note = noteQueryPort.findById(id) ?: return null
         val unbookmarked = note.unbookmark()
-        return noteCommandPort.save(unbookmarked)
+        return noteCommandPort.save(unbookmarked).also {
+            noteListCachePort.evictOwner(it.ownerUsername)
+        }
     }
 }
 

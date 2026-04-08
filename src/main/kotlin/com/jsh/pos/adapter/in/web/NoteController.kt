@@ -3,9 +3,8 @@ package com.jsh.pos.adapter.`in`.web
 import com.jsh.pos.application.port.`in`.BookmarkNoteUseCase
 import com.jsh.pos.application.port.`in`.CreateNoteUseCase
 import com.jsh.pos.application.port.`in`.DeleteNoteUseCase
-import com.jsh.pos.application.port.`in`.GetBookmarkedNotesUseCase
 import com.jsh.pos.application.port.`in`.GetNoteUseCase
-import com.jsh.pos.application.port.`in`.SearchNotesUseCase
+import com.jsh.pos.application.port.`in`.GetNoteListPageUseCase
 import com.jsh.pos.application.port.`in`.UpdateNoteUseCase
 import com.jsh.pos.domain.note.Note
 import com.jsh.pos.domain.note.Visibility
@@ -13,6 +12,9 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.authentication.AnonymousAuthenticationToken
+import org.springframework.security.core.Authentication
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -57,13 +59,30 @@ class NoteController(
     private val createNoteUseCase: CreateNoteUseCase,
     private val getNoteUseCase: GetNoteUseCase,
     private val updateNoteUseCase: UpdateNoteUseCase,
-    private val searchNotesUseCase: SearchNotesUseCase,
+    private val getNoteListPageUseCase: GetNoteListPageUseCase,
     private val deleteNoteUseCase: DeleteNoteUseCase,
     // port.in 주입: 북마크 ON/OFF 유스케이스
     private val bookmarkNoteUseCase: BookmarkNoteUseCase,
-    // port.in 주입: 북마크 목록 조회 유스케이스
-    private val getBookmarkedNotesUseCase: GetBookmarkedNotesUseCase,
 ) {
+
+    @GetMapping
+    fun list(
+        @RequestParam(required = false) keyword: String?,
+        @RequestParam(defaultValue = "false") bookmarkedOnly: Boolean,
+        @RequestParam(defaultValue = "recent") sort: String,
+        authentication: Authentication? = null,
+    ): ResponseEntity<List<NoteResponse>> {
+        val result = getNoteListPageUseCase.get(
+            GetNoteListPageUseCase.Command(
+                ownerUsername = currentUsername(authentication),
+                keyword = keyword,
+                bookmarkedOnly = bookmarkedOnly,
+                sort = sort,
+            ),
+        )
+
+        return ResponseEntity.ok(result.notes.map { it.toResponse() })
+    }
 
     /**
      * 새 노트를 생성합니다.
@@ -141,12 +160,24 @@ class NoteController(
      * @return 200 OK + 검색 결과 배열
      */
     @GetMapping("/search")
-    fun search(@RequestParam keyword: String): ResponseEntity<List<NoteResponse>> {
+    fun search(
+        @RequestParam keyword: String,
+        @RequestParam(defaultValue = "recent") sort: String,
+        authentication: Authentication? = null,
+    ): ResponseEntity<List<NoteResponse>> {
         // [1-SEARCH] 검색 요청의 시작점입니다.
         // 브레이크포인트 추천: keyword에 앞뒤 공백이 포함되어 들어오는지 확인
-        val notes = searchNotesUseCase.search(SearchNotesUseCase.Command(keyword = keyword))
+        require(keyword.isNotBlank()) { "검색어는 비워둘 수 없습니다" }
+        val result = getNoteListPageUseCase.get(
+            GetNoteListPageUseCase.Command(
+                ownerUsername = currentUsername(authentication),
+                keyword = keyword,
+                bookmarkedOnly = false,
+                sort = sort,
+            ),
+        )
         // [5-SEARCH] 검색 결과를 응답 DTO로 변환해 반환하는 지점입니다.
-        return ResponseEntity.ok(notes.map { it.toResponse() })
+        return ResponseEntity.ok(result.notes.map { it.toResponse() })
     }
 
     /**
@@ -212,9 +243,19 @@ class NoteController(
      * @return 200 OK + 북마크된 노트 배열
      */
     @GetMapping("/bookmarks")
-    fun getBookmarked(): ResponseEntity<List<NoteResponse>> {
-        val notes = getBookmarkedNotesUseCase.getBookmarked()
-        return ResponseEntity.ok(notes.map { it.toResponse() })
+    fun getBookmarked(
+        @RequestParam(defaultValue = "recent") sort: String,
+        authentication: Authentication? = null,
+    ): ResponseEntity<List<NoteResponse>> {
+        val result = getNoteListPageUseCase.get(
+            GetNoteListPageUseCase.Command(
+                ownerUsername = currentUsername(authentication),
+                keyword = null,
+                bookmarkedOnly = true,
+                sort = sort,
+            ),
+        )
+        return ResponseEntity.ok(result.notes.map { it.toResponse() })
     }
 
     /**
@@ -251,6 +292,12 @@ class NoteController(
         val note = bookmarkNoteUseCase.unbookmark(id)
             ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(note.toResponse())
+    }
+
+    private fun currentUsername(authentication: Authentication?): String {
+        val auth = authentication ?: SecurityContextHolder.getContext().authentication
+        val isAuthenticated = auth != null && auth.isAuthenticated && auth !is AnonymousAuthenticationToken
+        return if (isAuthenticated) auth.name else "anonymousUser"
     }
 }
 
