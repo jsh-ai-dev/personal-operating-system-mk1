@@ -25,6 +25,8 @@
 
     <form method="get" action="/notes" class="panel search-row">
         <input class="input" type="text" name="keyword" placeholder="제목/본문 검색" th:value="${keyword}">
+        <input type="hidden" name="page" value="0">
+        <input type="hidden" name="size" th:value="${size}">
         <select class="input input-inline" name="sort">
             <option value="recent" th:selected="${sort == 'recent'}">최신 수정순</option>
             <option value="title" th:selected="${sort == 'title'}">제목순</option>
@@ -71,6 +73,33 @@
             </div>
         </article>
     </section>
+
+    <nav class="panel" th:if="${totalPages > 1}">
+        <div class="btn-group" style="justify-content: space-between; width: 100%; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div class="btn-group">
+                <a class="btn btn-ghost"
+                   th:if="${hasPrevious}"
+                   th:href="@{/notes(keyword=${keyword}, bookmarkedOnly=${bookmarkedOnly}, sort=${sort}, page=${page - 1}, size=${size})}">이전</a>
+                <span class="subtle" th:if="${!hasPrevious}">이전</span>
+            </div>
+
+            <div class="btn-group" style="flex-wrap: wrap;">
+                <a th:each="pageNumber : ${pageNumbers}"
+                   class="btn"
+                   th:classappend="${pageNumber == page} ? ' btn-primary' : ' btn-ghost'"
+                   th:href="@{/notes(keyword=${keyword}, bookmarkedOnly=${bookmarkedOnly}, sort=${sort}, page=${pageNumber}, size=${size})}"
+                   th:text="${pageNumber + 1}">1</a>
+            </div>
+
+            <div class="btn-group" style="align-items: center; gap: 8px;">
+                <span class="subtle" th:text="|${currentPageDisplay} / ${totalPages} · 총 ${totalElements}건|">1 / 1 · 총 0건</span>
+                <a class="btn btn-ghost"
+                   th:if="${hasNext}"
+                   th:href="@{/notes(keyword=${keyword}, bookmarkedOnly=${bookmarkedOnly}, sort=${sort}, page=${page + 1}, size=${size})}">다음</a>
+                <span class="subtle" th:if="${!hasNext}">다음</span>
+            </div>
+        </div>
+    </nav>
 </main>
 </body>
 </html>

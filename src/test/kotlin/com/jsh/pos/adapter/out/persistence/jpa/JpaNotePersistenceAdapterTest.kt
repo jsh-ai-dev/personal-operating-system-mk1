@@ -92,5 +92,93 @@ class JpaNotePersistenceAdapterTest {
         assertFalse(adapter.deleteById("note-jpa-3"))
         assertEquals(null, adapter.findById("note-jpa-3"))
     }
+
+    @Test
+    fun `findPageByOwner returns only owner notes with requested page size`() {
+        val now = Instant.parse("2026-04-04T00:00:00Z")
+        (1..6).forEach { index ->
+            adapter.save(
+                Note.create(
+                    id = "note-owner-$index",
+                    ownerUsername = "owner-a",
+                    title = "A-$index",
+                    content = "owner-a content $index",
+                    visibility = Visibility.PRIVATE,
+                    tags = setOf("tag$index"),
+                    now = now.plusSeconds(index.toLong()),
+                ),
+            )
+        }
+        adapter.save(
+            Note.create(
+                id = "note-owner-other",
+                ownerUsername = "owner-b",
+                title = "B-1",
+                content = "owner-b content",
+                visibility = Visibility.PRIVATE,
+                tags = emptySet(),
+                now = now,
+            ),
+        )
+
+        val page = adapter.findPageByOwner(ownerUsername = "owner-a", sort = "recent", page = 0, size = 5)
+
+        assertEquals(5, page.items.size)
+        assertTrue(page.items.all { it.ownerUsername == "owner-a" })
+        assertEquals(6, page.totalElements)
+        assertEquals(2, page.totalPages)
+        assertTrue(page.hasNext)
+    }
+
+    @Test
+    fun `searchPageByOwner applies owner filter and keyword with paging`() {
+        val now = Instant.parse("2026-04-04T01:00:00Z")
+        adapter.save(
+            Note.create(
+                id = "search-owner-a-1",
+                ownerUsername = "owner-a",
+                title = "Kotlin memo",
+                content = "Spring data",
+                visibility = Visibility.PRIVATE,
+                tags = setOf("kotlin"),
+                now = now,
+            ),
+        )
+        adapter.save(
+            Note.create(
+                id = "search-owner-a-2",
+                ownerUsername = "owner-a",
+                title = "Another Kotlin",
+                content = "JPA paging",
+                visibility = Visibility.PRIVATE,
+                tags = setOf("backend"),
+                now = now.plusSeconds(1),
+            ),
+        )
+        adapter.save(
+            Note.create(
+                id = "search-owner-b-1",
+                ownerUsername = "owner-b",
+                title = "Kotlin from other",
+                content = "ignore",
+                visibility = Visibility.PRIVATE,
+                tags = setOf("kotlin"),
+                now = now.plusSeconds(2),
+            ),
+        )
+
+        val page = adapter.searchPageByOwner(
+            ownerUsername = "owner-a",
+            keyword = "kotlin",
+            sort = "recent",
+            page = 0,
+            size = 1,
+        )
+
+        assertEquals(1, page.items.size)
+        assertEquals(2, page.totalElements)
+        assertEquals(2, page.totalPages)
+        assertTrue(page.items.all { it.ownerUsername == "owner-a" })
+    }
 }
 

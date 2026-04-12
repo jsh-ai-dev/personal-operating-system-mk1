@@ -99,13 +99,56 @@ class NoteControllerTest {
                         keyword = "",
                         bookmarkedOnly = false,
                         sort = "recent",
+                        page = 0,
+                        size = 20,
+                        totalElements = 1,
+                        totalPages = 1,
                     ),
                 )
 
                 mockMvc.perform(get("/api/v1/notes"))
                     .andExpect(status().isOk)
                     .andExpect(jsonPath("$[0].id").value("note-list-1"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Page", "0"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Size", "20"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Total-Elements", "1"))
+                    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Total-Pages", "1"))
             }
+
+    @Test
+    fun `GET note list forwards page and size params`() {
+        given(
+            getNoteListPageUseCase.get(
+                GetNoteListPageUseCase.Command(
+                    ownerUsername = "anonymousUser",
+                    keyword = null,
+                    bookmarkedOnly = false,
+                    sort = "recent",
+                    page = 2,
+                    size = 5,
+                ),
+            ),
+        ).willReturn(
+            GetNoteListPageUseCase.Result(
+                notes = emptyList(),
+                keyword = "",
+                bookmarkedOnly = false,
+                sort = "recent",
+                page = 2,
+                size = 5,
+                totalElements = 12,
+                totalPages = 3,
+                hasPrevious = true,
+            ),
+        )
+
+        mockMvc.perform(get("/api/v1/notes").param("page", "2").param("size", "5"))
+            .andExpect(status().isOk)
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Page", "2"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Size", "5"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Has-Previous", "true"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("X-Has-Next", "false"))
+    }
 
     /**
      * 테스트: POST /api/v1/notes로 노트를 생성하면 201 Created를 반환하는가?

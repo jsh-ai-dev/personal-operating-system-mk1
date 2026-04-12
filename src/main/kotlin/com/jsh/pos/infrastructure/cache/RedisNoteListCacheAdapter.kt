@@ -2,6 +2,7 @@ package com.jsh.pos.infrastructure.cache
 
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.application.port.out.NoteListCachePort
 import com.jsh.pos.domain.note.Note
 import org.slf4j.LoggerFactory
@@ -15,6 +16,56 @@ class RedisNoteListCacheAdapter(
     private val objectMapper: ObjectMapper,
     private val properties: NoteListCacheProperties,
 ) : NoteListCachePort {
+
+    override fun getOrLoadPage(query: NoteListCachePort.Query, loader: () -> PageResult<Note>): PageResult<Note> {
+        val mode = resolveMode(query)
+        val ownerSegment = ownerSegment(query.ownerUsername)
+        val key = buildCacheKey(query)
+        val cachedJson = stringRedisTemplate.opsForValue().get(key)
+        if (!cachedJson.isNullOrBlank()) {
+            val cachedPage = objectMapper.readValue(cachedJson, NOTE_PAGE_TYPE_REFERENCE)
+            logger.info(
+                "[note-list-cache] HIT owner={} mode={} sort={} page={} size={} key={} count={}",
+                query.ownerUsername,
+                mode,
+                query.sort,
+                query.page,
+                query.size,
+                key,
+                cachedPage.items.size,
+            )
+            return cachedPage
+        }
+
+        logger.info(
+            "[note-list-cache] MISS owner={} mode={} sort={} page={} size={} key={}",
+            query.ownerUsername,
+            mode,
+            query.sort,
+            query.page,
+            query.size,
+            key,
+        )
+        val loadedPage = loader()
+        stringRedisTemplate.opsForValue().set(
+            key,
+            objectMapper.writeValueAsString(loadedPage),
+            properties.ttl,
+        )
+        stringRedisTemplate.opsForSet().add(indexKey(ownerSegment, mode), key)
+        logger.info(
+            "[note-list-cache] PUT owner={} mode={} sort={} page={} size={} key={} count={} ttl={}s",
+            query.ownerUsername,
+            mode,
+            query.sort,
+            query.page,
+            query.size,
+            key,
+            loadedPage.items.size,
+            properties.ttl.seconds,
+        )
+        return loadedPage
+    }
 
     override fun getOrLoad(query: NoteListCachePort.Query, loader: () -> List<Note>): List<Note> {
         val mode = resolveMode(query)
@@ -95,7 +146,9 @@ class RedisNoteListCacheAdapter(
         val mode = resolveMode(query)
         val keywordHash = hashKeyword(query.keyword)
         val sort = query.sort.trim().lowercase().ifBlank { "recent" }
-        return "${properties.keyPrefix}$ownerSegment:${mode.name.lowercase()}:$sort:$keywordHash"
+        val page = query.page.coerceAtLeast(0)
+        val size = query.size.coerceAtLeast(1)
+        return "${properties.keyPrefix}$ownerSegment:${mode.name.lowercase()}:$sort:$keywordHash:p$page:s$size"
     }
 
     private fun resolveMode(query: NoteListCachePort.Query): NoteListCachePort.Mode = when {
@@ -128,6 +181,7 @@ class RedisNoteListCacheAdapter(
     private companion object {
         private val logger = LoggerFactory.getLogger(RedisNoteListCacheAdapter::class.java)
         val NOTE_LIST_TYPE_REFERENCE = object : TypeReference<List<Note>>() {}
+        val NOTE_PAGE_TYPE_REFERENCE = object : TypeReference<PageResult<Note>>() {}
     }
 }
 

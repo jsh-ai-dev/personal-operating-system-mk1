@@ -1,5 +1,6 @@
 package com.jsh.pos.application.port.out
 
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.domain.note.Note
 
 /**
@@ -10,6 +11,8 @@ import com.jsh.pos.domain.note.Note
  */
 interface NoteListCachePort {
     fun getOrLoad(query: Query, loader: () -> List<Note>): List<Note>
+
+    fun getOrLoadPage(query: Query, loader: () -> PageResult<Note>): PageResult<Note> = loader()
 
     fun evictOwner(ownerUsername: String)
 
@@ -29,6 +32,8 @@ interface NoteListCachePort {
         val keyword: String,
         val bookmarkedOnly: Boolean,
         val sort: String,
+        val page: Int = 0,
+        val size: Int = 20,
     )
 }
 

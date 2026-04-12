@@ -1,6 +1,7 @@
 package com.jsh.pos.adapter.out.search.elasticsearch
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.application.model.NoteSearchHighlight
 import com.jsh.pos.application.model.NoteSearchHit
 import com.jsh.pos.application.port.out.NoteQueryPort
@@ -35,34 +36,44 @@ class ElasticsearchNoteSearchAdapter(
     private val indexName: String,
 ) : NoteSearchPort, NoteSearchIndexPort {
 
-    override fun search(ownerUsername: String, keyword: String, sort: String): List<NoteSearchHit> {
+    override fun search(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<NoteSearchHit> {
         val normalizedOwner = ownerUsername.trim().ifBlank { "anonymousUser" }
         val normalizedKeyword = keyword.trim()
         val normalizedSort = sort.trim().lowercase()
+        val normalizedPage = page.coerceAtLeast(0)
+        val normalizedSize = size.coerceAtLeast(1)
         if (normalizedKeyword.isBlank()) {
-            return emptyList()
+            return emptyPage(normalizedPage, normalizedSize)
         }
 
         if (!elasticsearchEnabled) {
-            return fallbackSearch(normalizedOwner, normalizedKeyword, normalizedSort)
+            return fallbackSearch(normalizedOwner, normalizedKeyword, normalizedSort, normalizedPage, normalizedSize)
         }
 
         val operations = elasticsearchOperationsProvider.getIfAvailable()
-            ?: return fallbackSearch(normalizedOwner, normalizedKeyword, normalizedSort)
+            ?: return fallbackSearch(normalizedOwner, normalizedKeyword, normalizedSort, normalizedPage, normalizedSize)
 
         return try {
-            val query = buildSearchQuery(normalizedOwner, normalizedKeyword, normalizedSort)
+            val query = buildSearchQuery(normalizedOwner, normalizedKeyword, normalizedSort, normalizedPage, normalizedSize)
             val hits: SearchHits<NoteSearchDocument> =
                 operations.search(query, NoteSearchDocument::class.java, IndexCoordinates.of(indexName))
-            hits.searchHits.map { hit ->
-                NoteSearchHit(
-                    note = hit.content.toDomain(),
-                    highlight = extractHighlight(hit),
-                )
+            val items = hits.searchHits.map { hit ->
+                NoteSearchHit(note = hit.content.toDomain(), highlight = extractHighlight(hit))
             }
+            val totalElements = hits.totalHits.toInt()
+            val totalPages = if (totalElements == 0) 0 else ((totalElements - 1) / normalizedSize) + 1
+            PageResult(
+                items = items,
+                page = normalizedPage,
+                size = normalizedSize,
+                totalElements = totalElements,
+                totalPages = totalPages,
+                hasPrevious = normalizedPage > 0,
+                hasNext = normalizedPage + 1 < totalPages,
+            )
         } catch (e: Exception) {
             logger.warn("[note-search] Elasticsearch search failed, fallback to DB. reason={}", e.message)
-            fallbackSearch(normalizedOwner, normalizedKeyword, normalizedSort)
+            fallbackSearch(normalizedOwner, normalizedKeyword, normalizedSort, normalizedPage, normalizedSize)
         }
     }
 
@@ -90,23 +101,30 @@ class ElasticsearchNoteSearchAdapter(
         }
     }
 
-    private fun fallbackSearch(ownerUsername: String, keyword: String, sort: String): List<NoteSearchHit> {
-        val filtered = noteQueryPort.searchByKeyword(keyword)
-            .filter { it.ownerUsername == ownerUsername }
-
-        val sorted = when (sort) {
-            "title" -> filtered.sortedBy { it.title.lowercase() }
-            // relevance는 DB fallback에서 동일 점수 기반 정렬이 불가능하므로 기본 검색 순서를 유지합니다.
-            "relevance" -> filtered
-            else -> filtered.sortedByDescending { it.updatedAt }
-        }
-
-        return sorted.map { NoteSearchHit(note = it) }
+    private fun fallbackSearch(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<NoteSearchHit> {
+        val pageResult = noteQueryPort.searchPageByOwner(
+            ownerUsername = ownerUsername,
+            keyword = keyword,
+            sort = sort,
+            page = page,
+            size = size,
+        )
+        return PageResult(
+            items = pageResult.items.map { NoteSearchHit(note = it) },
+            page = pageResult.page,
+            size = pageResult.size,
+            totalElements = pageResult.totalElements,
+            totalPages = pageResult.totalPages,
+            hasPrevious = pageResult.hasPrevious,
+            hasNext = pageResult.hasNext,
+        )
     }
 
-    private fun buildSearchQuery(ownerUsername: String, keyword: String, sort: String): StringQuery {
+    private fun buildSearchQuery(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): StringQuery {
         val ownerJson = objectMapper.writeValueAsString(ownerUsername)
         val keywordJson = objectMapper.writeValueAsString(keyword)
+        val from = page * size
+        val pageJson = "\"from\": $from, \"size\": $size"
         val sortJson = if (sort == "recent") {
             """
             ,
@@ -140,6 +158,7 @@ class ElasticsearchNoteSearchAdapter(
         return StringQuery(
             """
             {
+              $pageJson,
               "bool": {
                 "must": [
                   { "term": { "ownerUsername": $ownerJson } }
@@ -156,6 +175,17 @@ class ElasticsearchNoteSearchAdapter(
             """.trimIndent(),
         )
     }
+
+    private fun emptyPage(page: Int, size: Int): PageResult<NoteSearchHit> =
+        PageResult(
+            items = emptyList(),
+            page = page,
+            size = size,
+            totalElements = 0,
+            totalPages = 0,
+            hasPrevious = false,
+            hasNext = false,
+        )
 
     private fun extractHighlight(hit: SearchHit<NoteSearchDocument>): NoteSearchHighlight {
         val fields = hit.highlightFields

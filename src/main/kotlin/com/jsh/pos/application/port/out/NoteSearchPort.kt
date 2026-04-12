@@ -1,5 +1,6 @@
 package com.jsh.pos.application.port.out
 
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.application.model.NoteSearchHit
 
 /**
@@ -9,6 +10,6 @@ import com.jsh.pos.application.model.NoteSearchHit
  * DB LIKE 기반 대체 구현으로 교체할 수 있습니다.
  */
 interface NoteSearchPort {
-    fun search(ownerUsername: String, keyword: String, sort: String): List<NoteSearchHit>
+    fun search(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<NoteSearchHit>
 }
 

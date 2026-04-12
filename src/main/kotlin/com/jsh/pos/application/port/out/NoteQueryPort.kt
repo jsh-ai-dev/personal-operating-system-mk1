@@ -1,5 +1,6 @@
 package com.jsh.pos.application.port.out
 
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.domain.note.Note
 
 /**
@@ -46,6 +47,18 @@ interface NoteQueryPort {
      */
     fun findAll(): List<Note> {
         throw UnsupportedOperationException("findAll is not implemented")
+    }
+
+    fun findPageByOwner(ownerUsername: String, sort: String, page: Int, size: Int): PageResult<Note> {
+        throw UnsupportedOperationException("findPageByOwner is not implemented")
+    }
+
+    fun findBookmarkedPageByOwner(ownerUsername: String, sort: String, page: Int, size: Int): PageResult<Note> {
+        throw UnsupportedOperationException("findBookmarkedPageByOwner is not implemented")
+    }
+
+    fun searchPageByOwner(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<Note> {
+        throw UnsupportedOperationException("searchPageByOwner is not implemented")
     }
 }
 

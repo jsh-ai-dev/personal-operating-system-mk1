@@ -1,11 +1,10 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.model.NoteSearchHighlight
-import com.jsh.pos.application.port.`in`.GetAllNotesUseCase
-import com.jsh.pos.application.port.`in`.GetBookmarkedNotesUseCase
 import com.jsh.pos.application.port.`in`.GetNoteListPageUseCase
 import com.jsh.pos.application.port.`in`.SearchNotesUseCase
 import com.jsh.pos.application.port.out.NoteListCachePort
+import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
 import org.springframework.stereotype.Service
 import org.springframework.web.util.HtmlUtils
@@ -14,8 +13,7 @@ import java.util.Locale
 @Service
 class GetNoteListPageService(
     private val searchNotesUseCase: SearchNotesUseCase,
-    private val getBookmarkedNotesUseCase: GetBookmarkedNotesUseCase,
-    private val getAllNotesUseCase: GetAllNotesUseCase,
+    private val noteQueryPort: NoteQueryPort,
     private val noteListCachePort: NoteListCachePort,
 ) : GetNoteListPageUseCase {
 
@@ -23,18 +21,22 @@ class GetNoteListPageService(
         val ownerUsername = command.ownerUsername.trim().ifBlank { "anonymousUser" }
         val normalizedKeyword = command.keyword?.trim().orEmpty()
         val normalizedSort = normalizeSort(command.sort)
+        val normalizedPage = normalizePage(command.page)
+        val normalizedSize = normalizeSize(command.size)
 
         val highlightsById = mutableMapOf<String, NoteSearchHighlight>()
 
-        val notes = if (normalizedKeyword.isNotBlank()) {
-            val searchHits = searchNotesUseCase.search(
-                    SearchNotesUseCase.Command(
-                        ownerUsername = ownerUsername,
-                        keyword = normalizedKeyword,
-                        sort = normalizedSort,
-                    ),
-                )
-            searchHits.forEach { hit ->
+        if (normalizedKeyword.isNotBlank()) {
+            val searchResult = searchNotesUseCase.search(
+                SearchNotesUseCase.Command(
+                    ownerUsername = ownerUsername,
+                    keyword = normalizedKeyword,
+                    sort = normalizedSort,
+                    page = normalizedPage,
+                    size = normalizedSize,
+                ),
+            )
+            searchResult.hits.forEach { hit ->
                 val highlight = if (hasAnyHighlight(hit.highlight)) {
                     hit.highlight
                 } else {
@@ -44,53 +46,74 @@ class GetNoteListPageService(
                     highlightsById[hit.note.id] = highlight
                 }
             }
-            val foundNotes = searchHits.map { it.note }
 
-            sortNotes(
-                foundNotes.filter { it.ownerUsername == ownerUsername },
-                normalizedSort,
+            return GetNoteListPageUseCase.Result(
+                notes = searchResult.hits.map { it.note },
+                keyword = normalizedKeyword,
+                bookmarkedOnly = command.bookmarkedOnly,
+                sort = normalizedSort,
+                page = searchResult.page,
+                size = searchResult.size,
+                totalElements = searchResult.totalElements,
+                totalPages = searchResult.totalPages,
+                hasPrevious = searchResult.hasPrevious,
+                hasNext = searchResult.hasNext,
+                highlightsById = highlightsById,
             )
-        } else {
-            noteListCachePort.getOrLoad(
-                NoteListCachePort.Query(
-                    ownerUsername = ownerUsername,
-                    keyword = normalizedKeyword,
-                    bookmarkedOnly = command.bookmarkedOnly,
-                    sort = normalizedSort,
-                ),
-            ) {
-                val foundNotes = when {
-                    command.bookmarkedOnly -> getBookmarkedNotesUseCase.getBookmarked()
-                    else -> getAllNotesUseCase.getAll()
-                }
+        }
 
-                sortNotes(
-                    foundNotes.filter { it.ownerUsername == ownerUsername },
-                    normalizedSort,
+        val pageResult = noteListCachePort.getOrLoadPage(
+            NoteListCachePort.Query(
+                ownerUsername = ownerUsername,
+                keyword = normalizedKeyword,
+                bookmarkedOnly = command.bookmarkedOnly,
+                sort = normalizedSort,
+                page = normalizedPage,
+                size = normalizedSize,
+            ),
+        ) {
+            when {
+                command.bookmarkedOnly -> noteQueryPort.findBookmarkedPageByOwner(
+                    ownerUsername = ownerUsername,
+                    sort = normalizedSort,
+                    page = normalizedPage,
+                    size = normalizedSize,
+                )
+
+                else -> noteQueryPort.findPageByOwner(
+                    ownerUsername = ownerUsername,
+                    sort = normalizedSort,
+                    page = normalizedPage,
+                    size = normalizedSize,
                 )
             }
         }
 
         return GetNoteListPageUseCase.Result(
-            notes = notes,
+            notes = pageResult.items,
             keyword = normalizedKeyword,
             bookmarkedOnly = command.bookmarkedOnly,
             sort = normalizedSort,
+            page = pageResult.page,
+            size = pageResult.size,
+            totalElements = pageResult.totalElements,
+            totalPages = pageResult.totalPages,
+            hasPrevious = pageResult.hasPrevious,
+            hasNext = pageResult.hasNext,
             highlightsById = highlightsById,
         )
     }
+
+    private fun normalizePage(page: Int): Int = page.coerceAtLeast(0)
+
+    private fun normalizeSize(size: Int): Int =
+        size.coerceIn(1, GetNoteListPageUseCase.MAX_PAGE_SIZE)
 
     private fun normalizeSort(sort: String): String {
         val normalized = sort.trim().lowercase(Locale.getDefault())
         return if (normalized in ALLOWED_SORTS) normalized else "recent"
     }
 
-    private fun sortNotes(notes: List<Note>, sort: String): List<Note> =
-        when (sort) {
-            "title" -> notes.sortedBy { it.title.lowercase(Locale.getDefault()) }
-            "relevance" -> notes
-            else -> notes.sortedWith(compareByDescending<Note> { it.updatedAt }.thenByDescending { it.createdAt })
-        }
 
     private fun hasAnyHighlight(highlight: NoteSearchHighlight): Boolean =
         highlight.title != null || highlight.summary != null || highlight.content != null

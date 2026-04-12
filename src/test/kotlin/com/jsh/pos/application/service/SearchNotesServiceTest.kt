@@ -1,6 +1,7 @@
 package com.jsh.pos.application.service
 
 import com.jsh.pos.application.model.NoteSearchHit
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.application.port.`in`.SearchNotesUseCase
 import com.jsh.pos.application.port.out.NoteSearchPort
 import com.jsh.pos.domain.note.Note
@@ -23,23 +24,34 @@ class SearchNotesServiceTest {
         val expected = listOf(
             NoteSearchHit(note = sampleNote(id = "note-1", title = "kotlin", content = "content", tags = setOf("spring"))),
         )
-        searchPort.nextResult = expected
+        searchPort.nextResult = PageResult(
+            items = expected,
+            page = 1,
+            size = 10,
+            totalElements = 11,
+            totalPages = 2,
+            hasPrevious = true,
+            hasNext = true,
+        )
 
         val result = searchNotesService.search(
-            SearchNotesUseCase.Command(ownerUsername = "pos-admin", keyword = "  kotlin  ", sort = "relevance"),
+            SearchNotesUseCase.Command(ownerUsername = "pos-admin", keyword = "  kotlin  ", sort = "relevance", page = 1, size = 10),
         )
 
         assertEquals("kotlin", searchPort.lastKeyword)
         assertEquals("pos-admin", searchPort.lastOwnerUsername)
         assertEquals("relevance", searchPort.lastSort)
-        assertEquals(expected, result)
+        assertEquals(1, searchPort.lastPage)
+        assertEquals(10, searchPort.lastSize)
+        assertEquals(expected, result.hits)
+        assertEquals(11, result.totalElements)
     }
 
     @Test
     fun `search throws when keyword is blank`() {
         assertThrows(IllegalArgumentException::class.java) {
             searchNotesService.search(
-                SearchNotesUseCase.Command(ownerUsername = "pos-admin", keyword = "   ", sort = "recent"),
+                SearchNotesUseCase.Command(ownerUsername = "pos-admin", keyword = "   ", sort = "recent", page = 0, size = 20),
             )
         }
     }
@@ -48,12 +60,24 @@ class SearchNotesServiceTest {
         var lastOwnerUsername: String? = null
         var lastKeyword: String? = null
         var lastSort: String? = null
-        var nextResult: List<NoteSearchHit> = emptyList()
+        var lastPage: Int? = null
+        var lastSize: Int? = null
+        var nextResult: PageResult<NoteSearchHit> = PageResult(
+            items = emptyList(),
+            page = 0,
+            size = 20,
+            totalElements = 0,
+            totalPages = 0,
+            hasPrevious = false,
+            hasNext = false,
+        )
 
-        override fun search(ownerUsername: String, keyword: String, sort: String): List<NoteSearchHit> {
+        override fun search(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<NoteSearchHit> {
             lastOwnerUsername = ownerUsername
             lastKeyword = keyword
             lastSort = sort
+            lastPage = page
+            lastSize = size
             return nextResult
         }
     }

@@ -11,6 +11,7 @@ import com.jsh.pos.domain.note.Visibility
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import org.springframework.http.HttpStatus
+import org.springframework.http.HttpHeaders
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.core.Authentication
@@ -70,6 +71,8 @@ class NoteController(
         @RequestParam(required = false) keyword: String?,
         @RequestParam(defaultValue = "false") bookmarkedOnly: Boolean,
         @RequestParam(defaultValue = "recent") sort: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
         authentication: Authentication? = null,
     ): ResponseEntity<List<NoteResponse>> {
         val result = getNoteListPageUseCase.get(
@@ -78,10 +81,12 @@ class NoteController(
                 keyword = keyword,
                 bookmarkedOnly = bookmarkedOnly,
                 sort = sort,
+                page = page,
+                size = size,
             ),
         )
 
-        return ResponseEntity.ok(result.notes.map { it.toResponse() })
+        return pagedResponse(result)
     }
 
     /**
@@ -175,6 +180,8 @@ class NoteController(
     fun search(
         @RequestParam keyword: String,
         @RequestParam(defaultValue = "recent") sort: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
         authentication: Authentication? = null,
     ): ResponseEntity<List<NoteResponse>> {
         // [1-SEARCH] 검색 요청의 시작점입니다.
@@ -186,10 +193,12 @@ class NoteController(
                 keyword = keyword,
                 bookmarkedOnly = false,
                 sort = sort,
+                page = page,
+                size = size,
             ),
         )
         // [5-SEARCH] 검색 결과를 응답 DTO로 변환해 반환하는 지점입니다.
-        return ResponseEntity.ok(result.notes.map { it.toResponse() })
+        return pagedResponse(result)
     }
 
     /**
@@ -271,6 +280,8 @@ class NoteController(
     @GetMapping("/bookmarks")
     fun getBookmarked(
         @RequestParam(defaultValue = "recent") sort: String,
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
         authentication: Authentication? = null,
     ): ResponseEntity<List<NoteResponse>> {
         val result = getNoteListPageUseCase.get(
@@ -279,9 +290,11 @@ class NoteController(
                 keyword = null,
                 bookmarkedOnly = true,
                 sort = sort,
+                page = page,
+                size = size,
             ),
         )
-        return ResponseEntity.ok(result.notes.map { it.toResponse() })
+        return pagedResponse(result)
     }
 
     /**
@@ -340,6 +353,20 @@ class NoteController(
         val auth = authentication ?: SecurityContextHolder.getContext().authentication
         val isAuthenticated = auth != null && auth.isAuthenticated && auth !is AnonymousAuthenticationToken
         return if (isAuthenticated) auth.name else "anonymousUser"
+    }
+
+    private fun pagedResponse(result: GetNoteListPageUseCase.Result): ResponseEntity<List<NoteResponse>> =
+        ResponseEntity.ok()
+            .headers(result.toPageHeaders())
+            .body(result.notes.map { it.toResponse() })
+
+    private fun GetNoteListPageUseCase.Result.toPageHeaders(): HttpHeaders = HttpHeaders().apply {
+        add("X-Page", page.toString())
+        add("X-Size", this@toPageHeaders.size.toString())
+        add("X-Total-Elements", totalElements.toString())
+        add("X-Total-Pages", totalPages.toString())
+        add("X-Has-Previous", hasPrevious.toString())
+        add("X-Has-Next", hasNext.toString())
     }
 }
 

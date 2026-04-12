@@ -15,17 +15,29 @@ class SearchNotesService(
     private val noteSearchPort: NoteSearchPort,
 ) : SearchNotesUseCase {
 
-    override fun search(command: SearchNotesUseCase.Command): List<NoteSearchHit> {
+    override fun search(command: SearchNotesUseCase.Command): SearchNotesUseCase.Result {
         // [2-SEARCH] 검색 유스케이스 계층입니다.
         // 여기서는 검색어를 정제(trim)하고, 공백 검색어를 막는 규칙을 적용합니다.
         val keyword = command.keyword.trim()
         require(keyword.isNotBlank()) { "검색어는 비워둘 수 없습니다" }
 
         // [4-SEARCH] 실제 검색은 저장소 어댑터에 위임합니다.
-        return noteSearchPort.search(
+        val pageResult = noteSearchPort.search(
             ownerUsername = command.ownerUsername,
             keyword = keyword,
             sort = command.sort,
+            page = command.page,
+            size = command.size,
+        )
+
+        return SearchNotesUseCase.Result(
+            hits = pageResult.items,
+            page = pageResult.page,
+            size = pageResult.size,
+            totalElements = pageResult.totalElements,
+            totalPages = pageResult.totalPages,
+            hasPrevious = pageResult.hasPrevious,
+            hasNext = pageResult.hasNext,
         )
     }
 }

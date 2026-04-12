@@ -153,6 +153,37 @@ class NotePageControllerTest {
     }
 
     @Test
+    fun `list exposes pagination model and forwards page size`() {
+        noteListPageService.nextResult = GetNoteListPageUseCase.Result(
+            notes = listOf(sampleNote("note-11", "열한번째")),
+            keyword = "",
+            bookmarkedOnly = false,
+            sort = "recent",
+            page = 1,
+            size = 10,
+            totalElements = 25,
+            totalPages = 3,
+            hasPrevious = true,
+            hasNext = true,
+        )
+
+        val model = ExtendedModelMap()
+        val viewName = controller.list(keyword = null, bookmarkedOnly = false, sort = "recent", page = 1, size = 10, model = model)
+
+        assertEquals("notes/list", viewName)
+        assertEquals(1, noteListPageService.lastCommand?.page)
+        assertEquals(10, noteListPageService.lastCommand?.size)
+        assertEquals(1, model["page"])
+        assertEquals(10, model["size"])
+        assertEquals(25, model["totalElements"])
+        assertEquals(3, model["totalPages"])
+        assertEquals(true, model["hasPrevious"])
+        assertEquals(true, model["hasNext"])
+        assertEquals(2, model["currentPageDisplay"])
+        assertEquals(listOf(0, 1, 2), model["pageNumbers"])
+    }
+
+    @Test
     fun `newForm returns form view with create mode`() {
         val model = ExtendedModelMap()
 

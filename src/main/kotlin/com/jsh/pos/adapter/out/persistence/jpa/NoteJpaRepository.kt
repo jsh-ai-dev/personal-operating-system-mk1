@@ -1,6 +1,8 @@
 package com.jsh.pos.adapter.out.persistence.jpa
 
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
@@ -37,6 +39,63 @@ interface NoteJpaRepository : JpaRepository<NoteJpaEntity, String> {
         """,
     )
     fun searchByKeyword(@Param("keyword") keyword: String): List<NoteJpaEntity>
+
+    @Query(
+        """
+        select note
+        from NoteJpaEntity note
+        where note.ownerUsername = :ownerUsername
+        """,
+    )
+    fun findPageByOwnerUsername(
+        @Param("ownerUsername") ownerUsername: String,
+        pageable: Pageable,
+    ): Page<NoteJpaEntity>
+
+    @Query(
+        """
+        select note
+        from NoteJpaEntity note
+        where note.ownerUsername = :ownerUsername
+          and note.bookmarked = true
+        """,
+    )
+    fun findBookmarkedPageByOwnerUsername(
+        @Param("ownerUsername") ownerUsername: String,
+        pageable: Pageable,
+    ): Page<NoteJpaEntity>
+
+    @Query(
+        value = """
+        select distinct note
+        from NoteJpaEntity note
+        left join note.tags tag
+        where note.ownerUsername = :ownerUsername
+          and (
+              lower(note.title) like lower(concat('%', :keyword, '%'))
+              or lower(note.content) like lower(concat('%', :keyword, '%'))
+              or lower(coalesce(note.aiSummary, '')) like lower(concat('%', :keyword, '%'))
+              or lower(tag) like lower(concat('%', :keyword, '%'))
+          )
+        """,
+        countQuery = """
+        select count(distinct note.id)
+        from NoteJpaEntity note
+        left join note.tags tag
+        where note.ownerUsername = :ownerUsername
+          and (
+              lower(note.title) like lower(concat('%', :keyword, '%'))
+              or lower(note.content) like lower(concat('%', :keyword, '%'))
+              or lower(coalesce(note.aiSummary, '')) like lower(concat('%', :keyword, '%'))
+              or lower(tag) like lower(concat('%', :keyword, '%'))
+          )
+        """,
+    )
+    fun searchPageByOwnerUsername(
+        @Param("ownerUsername") ownerUsername: String,
+        @Param("keyword") keyword: String,
+        pageable: Pageable,
+    ): Page<NoteJpaEntity>
 
     /**
      * 북마크된 노트를 최신 등록순으로 조회합니다.

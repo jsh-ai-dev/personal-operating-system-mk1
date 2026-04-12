@@ -58,6 +58,8 @@ class NotePageController(
         @RequestParam(required = false) keyword: String?,
         @RequestParam(defaultValue = "false") bookmarkedOnly: Boolean,
         @RequestParam(defaultValue = "recent") sort: String = "recent",
+        @RequestParam(defaultValue = "0") page: Int = 0,
+        @RequestParam(defaultValue = "20") size: Int = GetNoteListPageUseCase.DEFAULT_PAGE_SIZE,
         model: Model,
         authentication: Authentication? = null,
     ): String {
@@ -67,6 +69,8 @@ class NotePageController(
                 keyword = keyword,
                 bookmarkedOnly = bookmarkedOnly,
                 sort = sort,
+                page = page,
+                size = size,
             ),
         )
 
@@ -74,6 +78,14 @@ class NotePageController(
         model.addAttribute("keyword", result.keyword)
         model.addAttribute("bookmarkedOnly", result.bookmarkedOnly)
         model.addAttribute("sort", result.sort)
+        model.addAttribute("page", result.page)
+        model.addAttribute("size", result.size)
+        model.addAttribute("totalElements", result.totalElements)
+        model.addAttribute("totalPages", result.totalPages)
+        model.addAttribute("hasPrevious", result.hasPrevious)
+        model.addAttribute("hasNext", result.hasNext)
+        model.addAttribute("currentPageDisplay", result.page + 1)
+        model.addAttribute("pageNumbers", (0 until result.totalPages).toList())
         model.addAttribute("highlightsById", result.highlightsById)
         model.addAttribute("tagsDisplayById", result.notes.associate { it.id to formatTags(it.tags) })
         model.addAttribute("createdAtDisplayById", result.notes.associate { it.id to formatDateTime(it.createdAt) })

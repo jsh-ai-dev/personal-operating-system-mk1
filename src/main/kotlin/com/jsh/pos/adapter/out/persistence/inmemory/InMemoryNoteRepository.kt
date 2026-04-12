@@ -1,5 +1,6 @@
 package com.jsh.pos.adapter.out.persistence.inmemory
 
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
@@ -95,4 +96,58 @@ class InMemoryNoteRepository : NoteCommandPort, NoteQueryPort {
     override fun findAll(): List<Note> =
         notes.values
             .sortedByDescending { it.createdAt }
+
+    override fun findPageByOwner(ownerUsername: String, sort: String, page: Int, size: Int): PageResult<Note> =
+        paged(
+            notes.values.filter { it.ownerUsername == ownerUsername },
+            sort,
+            page,
+            size,
+        )
+
+    override fun findBookmarkedPageByOwner(ownerUsername: String, sort: String, page: Int, size: Int): PageResult<Note> =
+        paged(
+            notes.values.filter { it.ownerUsername == ownerUsername && it.bookmarked },
+            sort,
+            page,
+            size,
+        )
+
+    override fun searchPageByOwner(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<Note> {
+        val normalized = keyword.lowercase()
+        val filtered = notes.values.filter { note ->
+            note.ownerUsername == ownerUsername && (
+                note.title.lowercase().contains(normalized) ||
+                    note.content.lowercase().contains(normalized) ||
+                    (note.aiSummary?.lowercase()?.contains(normalized) == true) ||
+                    note.tags.any { tag -> tag.lowercase().contains(normalized) }
+                )
+        }
+        return paged(filtered, sort, page, size)
+    }
+
+    private fun paged(source: List<Note>, sort: String, page: Int, size: Int): PageResult<Note> {
+        val normalizedPage = page.coerceAtLeast(0)
+        val normalizedSize = size.coerceAtLeast(1)
+        val sorted = when (sort.trim().lowercase()) {
+            "title" -> source.sortedBy { it.title.lowercase() }
+            else -> source.sortedWith(compareByDescending<Note> { it.updatedAt }.thenByDescending { it.createdAt })
+        }
+
+        val totalElements = sorted.size
+        val fromIndex = (normalizedPage * normalizedSize).coerceAtMost(totalElements)
+        val toIndex = (fromIndex + normalizedSize).coerceAtMost(totalElements)
+        val items = sorted.subList(fromIndex, toIndex)
+        val totalPages = if (totalElements == 0) 0 else ((totalElements - 1) / normalizedSize) + 1
+
+        return PageResult(
+            items = items,
+            page = normalizedPage,
+            size = normalizedSize,
+            totalElements = totalElements,
+            totalPages = totalPages,
+            hasPrevious = normalizedPage > 0,
+            hasNext = normalizedPage + 1 < totalPages,
+        )
+    }
 }

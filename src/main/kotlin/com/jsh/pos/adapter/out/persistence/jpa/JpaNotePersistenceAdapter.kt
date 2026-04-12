@@ -1,8 +1,11 @@
 package com.jsh.pos.adapter.out.persistence.jpa
 
+import com.jsh.pos.application.model.PageResult
 import com.jsh.pos.application.port.out.NoteCommandPort
 import com.jsh.pos.application.port.out.NoteQueryPort
 import com.jsh.pos.domain.note.Note
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.context.annotation.Primary
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
@@ -93,4 +96,42 @@ class JpaNotePersistenceAdapter(
     override fun findAll(): List<Note> =
         noteJpaRepository.findAllByOrderByCreatedAtDesc()
             .map { it.toDomain(includeFileBytes = false) }
+
+    @Transactional(readOnly = true)
+    override fun findPageByOwner(ownerUsername: String, sort: String, page: Int, size: Int): PageResult<Note> =
+        noteJpaRepository.findPageByOwnerUsername(ownerUsername, pageRequest(page, size, sort))
+            .toPageResult()
+
+    @Transactional(readOnly = true)
+    override fun findBookmarkedPageByOwner(ownerUsername: String, sort: String, page: Int, size: Int): PageResult<Note> =
+        noteJpaRepository.findBookmarkedPageByOwnerUsername(ownerUsername, pageRequest(page, size, sort))
+            .toPageResult()
+
+    @Transactional(readOnly = true)
+    override fun searchPageByOwner(ownerUsername: String, keyword: String, sort: String, page: Int, size: Int): PageResult<Note> =
+        noteJpaRepository.searchPageByOwnerUsername(ownerUsername, keyword, pageRequest(page, size, sort))
+            .toPageResult()
+
+    private fun pageRequest(page: Int, size: Int, sort: String): PageRequest =
+        PageRequest.of(page.coerceAtLeast(0), size.coerceAtLeast(1), resolveSort(sort))
+
+    private fun resolveSort(sort: String): Sort {
+        val normalizedSort = sort.trim().lowercase()
+        return when (normalizedSort) {
+            "title" -> Sort.by(Sort.Order.asc("title").ignoreCase())
+            "relevance" -> Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("createdAt"))
+            else -> Sort.by(Sort.Order.desc("updatedAt"), Sort.Order.desc("createdAt"))
+        }
+    }
+
+    private fun org.springframework.data.domain.Page<NoteJpaEntity>.toPageResult(): PageResult<Note> =
+        PageResult(
+            items = content.map { it.toDomain(includeFileBytes = false) },
+            page = number,
+            size = size,
+            totalElements = totalElements.toInt(),
+            totalPages = totalPages,
+            hasPrevious = hasPrevious(),
+            hasNext = hasNext(),
+        )
 }
