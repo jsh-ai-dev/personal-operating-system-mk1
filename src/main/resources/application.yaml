@@ -39,6 +39,9 @@ spring:
   sql:
     init:
       mode: never
+  thymeleaf:
+    # devtools와 함께 사용 시 템플릿 캐시를 끄면 재기동 없이 변경 반영됩니다.
+    cache: false
 
 server:
   servlet:
