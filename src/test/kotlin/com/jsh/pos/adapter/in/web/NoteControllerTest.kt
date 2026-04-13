@@ -24,7 +24,10 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.security.test.context.support.WithMockUser
+import org.hamcrest.Matchers.containsString
+import org.springframework.http.HttpHeaders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.mockito.BDDMockito.given
@@ -762,6 +765,28 @@ class NoteControllerTest {
         mockMvc.perform(get("/api/v1/notes/t1/download"))
             .andExpect(status().isOk)
             .andExpect(content().bytes("본문".toByteArray(StandardCharsets.UTF_8)))
+    }
+
+    @Test
+    fun `GET download with inline uses inline content disposition`() {
+        given(getNoteUseCase.getById("t1")).willReturn(
+            Note(
+                id = "t1",
+                ownerUsername = "anonymousUser",
+                title = "제목",
+                content = "본문",
+                visibility = Visibility.PRIVATE,
+                tags = emptySet(),
+                originalFileName = "a.txt",
+                hasStoredFile = false,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ),
+        )
+
+        mockMvc.perform(get("/api/v1/notes/t1/download").param("inline", "true"))
+            .andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("inline")))
     }
 }
 

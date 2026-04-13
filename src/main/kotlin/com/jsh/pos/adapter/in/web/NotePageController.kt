@@ -362,6 +362,7 @@ class NotePageController(
     @GetMapping("/{id}/download")
     fun download(
         @PathVariable id: String,
+        @RequestParam(defaultValue = "false") inline: Boolean = false,
         authentication: Authentication? = null,
     ): ResponseEntity<ByteArray> {
         val note = getNoteUseCase.getById(id)
@@ -382,9 +383,15 @@ class NotePageController(
         } else {
             MediaType.parseMediaType("text/plain; charset=UTF-8")
         }
-        headers.contentDisposition = ContentDisposition.attachment()
-            .filename(fileName, StandardCharsets.UTF_8)
-            .build()
+        headers.contentDisposition = if (inline) {
+            ContentDisposition.inline()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+        } else {
+            ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+        }
 
         return ResponseEntity.ok()
             .headers(headers)

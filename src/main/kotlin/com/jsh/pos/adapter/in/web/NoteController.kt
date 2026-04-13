@@ -201,11 +201,15 @@ class NoteController(
     }
 
     /**
-     * 노트 원본(.txt 본문 내보내기 또는 업로드된 PDF 바이트)을 다운로드합니다.
+     * 노트 원본(.txt 본문 내보내기 또는 업로드된 PDF 바이트)을 내려줍니다.
+     *
+     * - 기본: [Content-Disposition: attachment] (파일 저장)
+     * - `inline=true`: [Content-Disposition: inline] (브라우저 탭에서 열기·PDF 뷰어 등)
      */
     @GetMapping("/{id}/download")
     fun download(
         @PathVariable id: String,
+        @RequestParam(defaultValue = "false") inline: Boolean = false,
         authentication: Authentication? = null,
     ): ResponseEntity<ByteArray> {
         val note = getNoteUseCase.getById(id) ?: return ResponseEntity.notFound().build()
@@ -226,9 +230,15 @@ class NoteController(
         } else {
             MediaType.parseMediaType("text/plain; charset=UTF-8")
         }
-        headers.contentDisposition = ContentDisposition.attachment()
-            .filename(fileName, StandardCharsets.UTF_8)
-            .build()
+        headers.contentDisposition = if (inline) {
+            ContentDisposition.inline()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+        } else {
+            ContentDisposition.attachment()
+                .filename(fileName, StandardCharsets.UTF_8)
+                .build()
+        }
 
         return ResponseEntity.ok()
             .headers(headers)
