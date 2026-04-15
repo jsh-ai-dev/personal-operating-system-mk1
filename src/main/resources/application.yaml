@@ -9,7 +9,7 @@ spring:
   datasource:
     # 환경변수가 없으면 로컬 PostgreSQL 기본값을 사용합니다.
     # 사용자 입장에서는 Docker나 로컬 설치 DB를 바로 연결해볼 수 있습니다.
-    url: ${POS_DB_URL:jdbc:postgresql://localhost:5432/personal_operating_system}
+    url: ${POS_DB_URL:jdbc:postgresql://localhost:5432/pos_mk1}
     username: ${POS_DB_USERNAME:pos}
     password: ${POS_DB_PASSWORD:pos}
   data:
@@ -23,7 +23,7 @@ spring:
   session:
     store-type: redis
     redis:
-      namespace: pos:session
+      namespace: ${POS_REDIS_NAMESPACE:pos:mk1:session}
   jpa:
     hibernate:
       # 개발 초기에는 update가 가장 편합니다.
@@ -52,11 +52,11 @@ pos:
   search:
     elasticsearch:
       enabled: ${POS_SEARCH_ELASTICSEARCH_ENABLED:false}
-      index-name: ${POS_SEARCH_ELASTICSEARCH_INDEX_NAME:notes-v1}
+      index-name: ${POS_SEARCH_ELASTICSEARCH_INDEX_NAME:notes-mk1}
       reindex-on-startup: ${POS_SEARCH_ELASTICSEARCH_REINDEX_ON_STARTUP:true}
   cache:
     note-list:
-      key-prefix: ${POS_NOTE_LIST_CACHE_KEY_PREFIX:pos:notes:list:v1:}
+      key-prefix: ${POS_NOTE_LIST_CACHE_KEY_PREFIX:pos:mk1:notes:list:v1:}
       ttl: ${POS_NOTE_LIST_CACHE_TTL:PT5M}
   auth:
     jwt:

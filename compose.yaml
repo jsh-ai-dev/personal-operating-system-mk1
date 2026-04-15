@@ -1,16 +1,16 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: pos-postgres
+    container_name: personal-operating-system-mk1-postgres
     environment:
-      POSTGRES_DB: ${POS_DB_NAME:-personal_operating_system}
+      POSTGRES_DB: ${POS_DB_NAME:-pos_mk1}
       POSTGRES_USER: ${POS_DB_USERNAME:-pos}
       POSTGRES_PASSWORD: ${POS_DB_PASSWORD:-pos}
       TZ: ${POS_DB_TZ:-Asia/Seoul}
     ports:
       - "5432:5432"
     volumes:
-      - pos-postgres-data:/var/lib/postgresql/data
+      - personal-operating-system-mk1-postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
@@ -19,11 +19,11 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: pos-redis
+    container_name: personal-operating-system-mk1-redis
     ports:
       - "6379:6379"
     volumes:
-      - pos-redis-data:/data
+      - personal-operating-system-mk1-redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -32,7 +32,7 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-    container_name: pos-elasticsearch
+    container_name: personal-operating-system-mk1-elasticsearch
     environment:
       discovery.type: single-node
       xpack.security.enabled: "false"
@@ -40,11 +40,11 @@ services:
     ports:
       - "9200:9200"
     volumes:
-      - pos-elasticsearch-data:/usr/share/elasticsearch/data
+      - personal-operating-system-mk1-elasticsearch-data:/usr/share/elasticsearch/data
 
 volumes:
-  pos-postgres-data:
-  pos-redis-data:
-  pos-elasticsearch-data:
+  personal-operating-system-mk1-postgres-data:
+  personal-operating-system-mk1-redis-data:
+  personal-operating-system-mk1-elasticsearch-data:
 
 

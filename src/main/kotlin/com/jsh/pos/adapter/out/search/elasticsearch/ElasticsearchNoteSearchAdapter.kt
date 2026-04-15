@@ -32,7 +32,7 @@ class ElasticsearchNoteSearchAdapter(
     private val elasticsearchOperationsProvider: ObjectProvider<ElasticsearchOperations>,
     @Value("\${pos.search.elasticsearch.enabled:false}")
     private val elasticsearchEnabled: Boolean,
-    @Value("\${pos.search.elasticsearch.index-name:notes-v1}")
+    @Value("\${pos.search.elasticsearch.index-name:notes-mk1}")
     private val indexName: String,
 ) : NoteSearchPort, NoteSearchIndexPort {
 
