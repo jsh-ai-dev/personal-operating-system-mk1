@@ -17,10 +17,10 @@ if (-not $SkipInfra) {
         exit 1
     }
 
-    Write-Host "Starting infrastructure with docker compose (postgres, redis, elasticsearch)..."
-    & docker compose -f (Join-Path $rootPath "compose.yaml") up -d postgres redis elasticsearch
+    Write-Host "Starting infrastructure with docker compose (postgres, redis)..."
+    & docker compose -f (Join-Path $rootPath "compose.yaml") up -d postgres redis
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "docker compose up -d postgres redis elasticsearch 실행에 실패했습니다."
+        Write-Error "docker compose up -d postgres redis 실행에 실패했습니다."
         exit $LASTEXITCODE
     }
     Write-Host ""

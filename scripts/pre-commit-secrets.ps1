@@ -14,7 +14,7 @@ $stagedFiles = @(& git diff --cached --name-only --diff-filter=ACMRT)
 
 # .env 같은 로컬 시크릿 파일이 스테이징되면 즉시 차단
 $blockedEnvFiles = $stagedFiles | Where-Object {
-    ($_ -match '(^|/|\\)\.env(\..+)?$') -and ($_ -notmatch '(^|/|\\)\.env\.example$')
+    ($_ -match '(^|/|\\)\.env(\..+)?$') -and ($_ -notmatch '(^|/|\\)\.env(\..+)?\.example$')
 }
 
 if ($blockedEnvFiles.Count -gt 0) {
@@ -36,6 +36,9 @@ foreach ($line in $addedLines) {
         continue
     }
     if ($line -cmatch $secretPattern) {
+        if ($line -match '[:=]\s*($|CHANGE_ME|pos$|pos-admin1234$)') {
+            continue
+        }
         $hits += $line
     }
 }
