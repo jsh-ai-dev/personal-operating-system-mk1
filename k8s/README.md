@@ -27,6 +27,26 @@ kubectl apply -k k8s/base
 kubectl -n pos-mk1 get all
 ```
 
+## AWS overlay
+
+Use this when DB/Redis are external (RDS/ElastiCache) and only app workloads run on EKS.
+
+1) Prepare overlay secret:
+
+```bash
+cp k8s/overlays/aws/secret.aws.example.yaml k8s/overlays/aws/secret.aws.yaml
+# edit RDS/Redis/JWT values
+```
+
+2) In `k8s/overlays/aws/kustomization.yaml`, replace ECR image URIs.
+
+3) Apply:
+
+```bash
+kubectl apply -k k8s/overlays/aws
+kubectl -n pos-mk1 get all
+```
+
 ## Notes for your AWS plan
 
 - `mk1`, `mk2`, `mk3` can run on the `t3.large` cluster.

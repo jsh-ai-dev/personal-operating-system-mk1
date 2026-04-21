@@ -1,0 +1,7 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mk1-ingress
+spec:
+  rules:
+    - host: mk1.REPLACE_DOMAIN
