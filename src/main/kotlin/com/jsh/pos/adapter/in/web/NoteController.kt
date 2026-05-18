@@ -543,7 +543,6 @@ class NoteController(
 data class CreateNoteRequest(
     @field:NotBlank(message = "제목은 필수입니다")
     val title: String,
-    @field:NotBlank(message = "본문은 필수입니다")
     val content: String,
     val visibility: Visibility = Visibility.PRIVATE,
     val tags: Set<String> = emptySet(),
@@ -555,7 +554,6 @@ data class CreateNoteRequest(
 data class UpdateNoteRequest(
     @field:NotBlank(message = "제목은 필수입니다")
     val title: String,
-    @field:NotBlank(message = "본문은 필수입니다")
     val content: String,
     val visibility: Visibility,
     val tags: Set<String> = emptySet(),
@@ -638,4 +636,3 @@ private fun Note.toResponse(): NoteResponse = NoteResponse(
     hasStoredFile = hasStoredFile,
     originalFileName = originalFileName,
 )
-

@@ -260,6 +260,46 @@ class NoteControllerTest {
             .andExpect(jsonPath("$.id").value("note-auth-1"))
     }
 
+    @Test
+    fun `POST note returns 201 when content is blank`() {
+        val command = CreateNoteUseCase.Command(
+            ownerUsername = "anonymousUser",
+            title = "blank content",
+            content = "",
+            visibility = Visibility.PRIVATE,
+            tags = emptySet(),
+        )
+
+        given(createNoteUseCase.create(command)).willReturn(
+            Note(
+                id = "note-blank-create",
+                title = "blank content",
+                content = "",
+                visibility = Visibility.PRIVATE,
+                tags = emptySet(),
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ),
+        )
+
+        mockMvc.perform(
+            post("/api/v1/notes")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "title": "blank content",
+                      "content": "",
+                      "visibility": "PRIVATE",
+                      "tags": []
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isCreated)
+            .andExpect(jsonPath("$.content").value(""))
+    }
+
     /**
      * 테스트: GET /api/v1/notes/{id}로 노트를 조회하면 200 OK를 반환하는가?
      *
@@ -365,6 +405,60 @@ class NoteControllerTest {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.title").value("updated title"))
             .andExpect(jsonPath("$.visibility").value("PUBLIC"))
+    }
+
+    @Test
+    fun `PUT note returns 200 when content is blank`() {
+        val command = UpdateNoteUseCase.Command(
+            title = "updated title",
+            content = "",
+            visibility = Visibility.PRIVATE,
+            tags = emptySet(),
+        )
+
+        given(getNoteUseCase.getById("note-blank")).willReturn(
+            Note(
+                id = "note-blank",
+                ownerUsername = "anonymousUser",
+                title = "before",
+                content = "",
+                visibility = Visibility.PRIVATE,
+                tags = emptySet(),
+                hasStoredFile = true,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ),
+        )
+
+        given(updateNoteUseCase.updateById("note-blank", command)).willReturn(
+            Note(
+                id = "note-blank",
+                title = "updated title",
+                content = "",
+                visibility = Visibility.PRIVATE,
+                tags = emptySet(),
+                hasStoredFile = true,
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            ),
+        )
+
+        mockMvc.perform(
+            put("/api/v1/notes/note-blank")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {
+                      "title": "updated title",
+                      "content": "",
+                      "visibility": "PRIVATE",
+                      "tags": []
+                    }
+                    """.trimIndent(),
+                ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.content").value(""))
     }
 
     /**
@@ -789,8 +883,6 @@ class NoteControllerTest {
             .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, containsString("inline")))
     }
 }
-
-
 
 
 

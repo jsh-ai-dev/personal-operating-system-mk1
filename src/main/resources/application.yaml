@@ -78,7 +78,7 @@ pos:
       flash-model: ${GEMINI_FLASH_MODEL:gemini-2.5-flash}
       pro-model: ${GEMINI_PRO_MODEL:gemini-2.5-pro}
       # 요약 응답 최대 토큰
-      max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:4096}
+      max-output-tokens: ${GEMINI_MAX_OUTPUT_TOKENS:8192}
     openai:
       # 기본 provider=openai에서 이 설정을 사용합니다.
       api-key: ${OPENAI_API_KEY:}

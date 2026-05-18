@@ -51,5 +51,19 @@ class GeminiResponseExtractorTest {
     fun `empty response returns null`() {
         assertNull(GeminiResponseExtractor.extractText(null))
     }
+
+    @Test
+    fun `finish reason is extracted from first candidate`() {
+        val response = GeminiGenerateContentResponse(
+            candidates = listOf(
+                Candidate(
+                    finishReason = "MAX_TOKENS",
+                    content = CandidateContent(parts = listOf(CandidatePart(text = "partial summary"))),
+                )
+            )
+        )
+
+        assertEquals("MAX_TOKENS", GeminiResponseExtractor.extractFinishReason(response))
+    }
 }
 

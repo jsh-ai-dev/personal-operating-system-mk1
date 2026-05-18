@@ -74,6 +74,31 @@ class UpdateNoteServiceTest {
         assertNull(result)
     }
 
+    @Test
+    fun `updateById allows blank content`() {
+        val existing = Note.create(
+            id = "note-blank",
+            title = "old",
+            content = "old-content",
+            visibility = Visibility.PRIVATE,
+            tags = emptySet(),
+            now = Instant.parse("2026-04-01T00:00:00Z"),
+        )
+        fakeRepository.save(existing)
+
+        val result = updateNoteService.updateById(
+            id = "note-blank",
+            command = UpdateNoteUseCase.Command(
+                title = "new title",
+                content = "   ",
+                visibility = Visibility.PRIVATE,
+            ),
+        )
+
+        assertNotNull(result)
+        assertEquals("", result!!.content)
+    }
+
     private class FakeNoteRepository : NoteCommandPort, NoteQueryPort {
         private val store = mutableMapOf<String, Note>()
 

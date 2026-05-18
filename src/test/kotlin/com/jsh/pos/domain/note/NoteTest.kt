@@ -1,7 +1,6 @@
 package com.jsh.pos.domain.note
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
@@ -41,7 +40,7 @@ class NoteTest {
     }
 
     @Test
-    fun `update throws when content is blank`() {
+    fun `update allows blank content`() {
         val note = Note.create(
             id = "note-1",
             title = "title",
@@ -51,15 +50,29 @@ class NoteTest {
             now = Instant.parse("2026-04-01T00:00:00Z"),
         )
 
-        assertThrows(IllegalArgumentException::class.java) {
-            note.update(
-                title = "updated",
-                content = "   ",
-                visibility = Visibility.PRIVATE,
-                tags = emptySet(),
-                now = Instant.parse("2026-04-02T00:00:00Z"),
-            )
-        }
+        val updated = note.update(
+            title = "updated",
+            content = "   ",
+            visibility = Visibility.PRIVATE,
+            tags = emptySet(),
+            now = Instant.parse("2026-04-02T00:00:00Z"),
+        )
+
+        assertEquals("", updated.content)
+    }
+
+    @Test
+    fun `create allows blank content`() {
+        val note = Note.create(
+            id = "note-blank",
+            title = "title",
+            content = "   ",
+            visibility = Visibility.PRIVATE,
+            tags = emptySet(),
+            now = Instant.parse("2026-04-01T00:00:00Z"),
+        )
+
+        assertEquals("", note.content)
     }
 }
 

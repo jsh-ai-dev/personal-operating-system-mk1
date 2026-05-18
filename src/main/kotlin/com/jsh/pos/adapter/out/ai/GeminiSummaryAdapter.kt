@@ -24,7 +24,7 @@ class GeminiSummaryAdapter(
     @Value("\${pos.ai.gemini.api-key:}") private val apiKey: String,
     @Value("\${pos.ai.gemini.flash-model:${GeminiModelResolver.DEFAULT_FLASH_MODEL}}") private val flashModel: String,
     @Value("\${pos.ai.gemini.pro-model:${GeminiModelResolver.DEFAULT_PRO_MODEL}}") private val proModel: String,
-    @Value("\${pos.ai.gemini.max-output-tokens:4096}") private val maxOutputTokens: Int,
+    @Value("\${pos.ai.gemini.max-output-tokens:8192}") private val maxOutputTokens: Int,
 ) : AiSummaryPort {
 
     private val restClient = RestClient.builder()
@@ -92,6 +92,13 @@ class GeminiSummaryAdapter(
             )
         } catch (e: RestClientException) {
             throw AiSummaryException("Gemini API 호출 중 오류가 발생했습니다: ${e.message}", e)
+        }
+
+        if (GeminiResponseExtractor.extractFinishReason(response).equals("MAX_TOKENS", ignoreCase = true)) {
+            throw AiSummaryException(
+                "Gemini 요약이 출력 토큰 제한으로 중단되었습니다. " +
+                    "GEMINI_MAX_OUTPUT_TOKENS 값을 늘리거나 더 짧은 원문으로 다시 시도하세요.",
+            )
         }
 
         return GeminiResponseExtractor.extractText(response)
@@ -188,6 +195,7 @@ internal data class GeminiGenerateContentResponse(
 @JsonIgnoreProperties(ignoreUnknown = true)
 internal data class Candidate(
     val content: CandidateContent? = null,
+    val finishReason: String? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -201,6 +209,9 @@ internal data class CandidatePart(
 )
 
 internal object GeminiResponseExtractor {
+
+    fun extractFinishReason(response: GeminiGenerateContentResponse?): String? =
+        response?.candidates?.firstOrNull()?.finishReason
 
     fun extractText(response: GeminiGenerateContentResponse?): String? {
         val candidate = response?.candidates?.firstOrNull()

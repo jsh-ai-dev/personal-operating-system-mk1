@@ -100,6 +100,19 @@ class CreateNoteServiceTest {
         }
     }
 
+    @Test
+    fun `create note allows blank content`() {
+        val created = createNoteService.create(
+            CreateNoteUseCase.Command(
+                title = "empty body",
+                content = "   ",
+                visibility = Visibility.PRIVATE,
+            ),
+        )
+
+        assertEquals("", created.content)
+    }
+
     /**
      * 테스트용 저장소 구현입니다.
      *

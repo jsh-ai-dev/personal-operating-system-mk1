@@ -19,7 +19,7 @@ import java.math.RoundingMode
 class OpenAiSummaryAdapter(
     @Value("\${pos.ai.openai.api-key:}") private val apiKey: String,
     @Value("\${pos.ai.openai.model:gpt-5-nano}") private val model: String,
-    @Value("\${pos.ai.openai.max-tokens:2048}") private val maxTokens: Int,
+    @Value("\${pos.ai.openai.max-tokens:8192}") private val maxTokens: Int,
 ) : AiSummaryPort {
 
     private val restClient = RestClient.builder()
@@ -61,6 +61,13 @@ class OpenAiSummaryAdapter(
                 "OpenAI response was empty. finish_reason=${choice.finishReason ?: "unknown"}, " +
                     "increase OPENAI_MAX_TOKENS or try again.",
             )
+
+        if (choice.finishReason?.lowercase() in setOf("length", "max_tokens")) {
+            throw AiSummaryException(
+                "OpenAI 요약이 출력 토큰 제한으로 중단되었습니다. " +
+                    "OPENAI_MAX_TOKENS 값을 늘리거나 더 짧은 원문으로 다시 시도하세요.",
+            )
+        }
 
         return AiSummaryResult(
             summary = summary,
