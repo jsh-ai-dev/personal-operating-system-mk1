@@ -11,12 +11,12 @@ mk2 Next.js BFF :3000
   └─ /api/notes/*  ->  mk1 Spring Boot :8080
 
 mk1 Spring Boot
-  ├─ Thymeleaf UI     # /login, /notes, /summary
-  ├─ REST API         # /api/v1/notes/*
-  ├─ PostgreSQL       # 노트, 파일 메타데이터, 사용자 테이블
-  ├─ Redis            # Spring Session, 노트 목록 캐시
-  ├─ Elasticsearch    # 선택형 검색 인덱스
-  └─ External AI      # OpenAI 또는 Gemini 요약
+  ├─ Thymeleaf UI      # /login, /notes, /summary
+  ├─ REST API          # /api/v1/notes/*
+  ├─ PostgreSQL        # 노트, 파일 메타데이터, 사용자 테이블
+  ├─ Redis             # Spring Session, 노트 목록 캐시
+  ├─ Elasticsearch     # 검색 엔진
+  └─ External LLM API  # OpenAI/Gemini 요약 API
 ```
 
 REST API는 mk2 BFF가 전달한 Bearer JWT를 검증하고, Thymeleaf UI는 mk2 auth-service 원격 로그인으로 받은 JWT를 mk1 전용 httpOnly 쿠키에 저장해 사용합니다.
@@ -26,7 +26,7 @@ REST API는 mk2 BFF가 전달한 Bearer JWT를 검증하고, Thymeleaf UI는 mk2
 - 노트 생성, 조회, 수정, 삭제
 - 태그, 공개 범위, 북마크 관리
 - `.txt`, `.pdf` 업로드와 원본 다운로드/새 탭 열기
-- PDFBox 기반 PDF 텍스트 추출 후 AI 요약 생성
+- PDF 텍스트 추출 후 AI 요약 생성
 - OpenAI/Gemini 요약 provider 전환, 모델 tier 선택, 토큰/예상 비용 저장
 - PostgreSQL 데이터 저장, Redis 세션 및 노트 목록 캐시
 - Elasticsearch 검색 선택 지원, 비활성화 또는 장애 시 DB 검색 fallback
@@ -56,25 +56,25 @@ personal-operating-system-mk1/
 └─ bootRun.ps1                 # 환경 파일 로딩 후 bootRun
 ```
 
-도메인과 유스케이스가 Spring MVC, JPA, Elasticsearch, AI SDK에 직접 의존하지 않도록 포트/어댑터 형태로 나뉘어 있습니다.
+Clean Architecture의 의존성 분리 원칙을 따르는 Hexagonal Architecture 기반 Port/Adapter 구조로 구성되어 있습니다.
 
 ## 주요 API
 
-| Method | Endpoint | 설명 |
-|---|---|---|
-| `GET` | `/api/v1/notes` | 목록 조회, 검색어/북마크/정렬/페이지 조건 지원 |
-| `POST` | `/api/v1/notes` | 노트 생성 |
-| `POST` | `/api/v1/notes/upload` | `.txt`, `.pdf` 업로드 |
-| `GET` | `/api/v1/notes/{id}` | 노트 상세 조회 |
-| `PUT` | `/api/v1/notes/{id}` | 노트 수정 |
-| `DELETE` | `/api/v1/notes/{id}` | 노트 삭제 |
-| `GET` | `/api/v1/notes/{id}/download` | 원본 파일 또는 텍스트 다운로드, `inline=true` 지원 |
-| `GET` | `/api/v1/notes/bookmarks` | 북마크 목록 |
-| `POST` / `DELETE` | `/api/v1/notes/{id}/bookmark` | 북마크 설정/해제 |
-| `POST` | `/api/v1/notes/{id}/summary/generate` | AI 요약 생성 |
-| `POST` | `/api/v1/notes/{id}/summary/save` | 생성된 요약 저장 |
+| Method | Endpoint | 설명                           |
+|---|---|------------------------------|
+| `GET` | `/api/v1/notes` | 목록 조회, 검색어/북마크/정렬/페이징        |
+| `POST` | `/api/v1/notes` | 노트 생성                        |
+| `POST` | `/api/v1/notes/upload` | `.txt`, `.pdf` 업로드           |
+| `GET` | `/api/v1/notes/{id}` | 노트 상세 조회                     |
+| `PUT` | `/api/v1/notes/{id}` | 노트 수정                        |
+| `DELETE` | `/api/v1/notes/{id}` | 노트 삭제                        |
+| `GET` | `/api/v1/notes/{id}/download` | 원본 파일 또는 텍스트 다운로드, 브라우저에서 열기 |
+| `GET` | `/api/v1/notes/bookmarks` | 북마크 목록                       |
+| `POST` / `DELETE` | `/api/v1/notes/{id}/bookmark` | 북마크 설정/해제                    |
+| `POST` | `/api/v1/notes/{id}/summary/generate` | AI 요약 생성                     |
+| `POST` | `/api/v1/notes/{id}/summary/save` | 생성된 요약 저장                    |
 
-Thymeleaf 화면은 `/login`, `/notes`, `/notes/new`, `/notes/{id}`, `/notes/{id}/edit`, `/summary`에서 제공됩니다.
+REST API와 별도로 `/login`, `/notes`, `/notes/new`, `/notes/{id}`, `/notes/{id}/edit`, `/summary` 경로에서 Thymeleaf 화면을 보여줍니다.
 
 ## 기술 스택
 
@@ -88,7 +88,7 @@ Thymeleaf 화면은 `/login`, `/notes`, `/notes/new`, `/notes/{id}`, `/notes/{id
 | AI | OpenAI API, Gemini API |
 | View | Thymeleaf, CSS, JavaScript |
 | File | Apache PDFBox |
-| Infra | Docker Compose, Kubernetes, Kustomize, GitHub Actions, AWS ECR |
+| Infra | Docker Compose, Kubernetes, Kustomize, GitHub Actions, AWS |
 
 ## 로컬 실행
 
@@ -169,4 +169,4 @@ POS_SEARCH_ELASTICSEARCH_REINDEX_ON_STARTUP=true
 - `compose.yaml`: app, PostgreSQL, Redis, Elasticsearch 로컬 스택
 - `k8s/base`: Namespace, ConfigMap, Secret 예시, PostgreSQL, Redis, App, Ingress
 - `k8s/overlays/aws`: 외부 데이터 서비스와 ECR 이미지를 사용하는 AWS overlay
-- `.github/workflows/ecr-push.yml`: 수동 실행으로 ECR push 후 self-hosted runner에서 k3s rollout restart
+- `.github/workflows/ecr-push.yml`: app 이미지를 ECR push 후 self-hosted runner에서 k3s rollout restart
